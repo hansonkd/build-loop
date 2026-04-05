@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "build-loop",
-      "source": ".",
+      "source": "./plugins/build-loop",
       "description": "Autonomous product development loop — researches, evaluates, builds, and simplifies your project continuously."
     }
   ]

@@ -169,9 +169,22 @@ All endpoints are served by FastAPI.
 | GET | `/api/response/{id}/audit` | Get just the audit trail for a specific response |
 | GET | `/api/response/{id}/verify` | Recompute provenance chain and check the seal is intact |
 | GET | `/api/response/{id}/bundle` | Export a self-contained proof bundle (JSON) for independent verification |
+| GET | `/api/response/{id}/bundle.pdf` | Export proof bundle as a formatted PDF document with header, signature block, and control references |
 | GET | `/api/memory` | List all memory entries |
 | DELETE | `/api/memory/{id}` | Delete a specific memory entry |
 | GET | `/api/status` | Backend health check (is Ollama running? which model?) |
+| GET | `/healthz` | Liveness probe — returns 200 if the process is running (for k8s/load balancers) |
+| GET | `/readyz` | Readiness probe — returns 200 only if an LLM backend is available and the database is accessible |
+
+## Logging
+
+Glass uses structured JSON logging via a custom middleware. Every HTTP request produces a single JSON log line containing:
+
+- `timestamp` (ISO 8601), `method`, `path`, `status_code`, `duration_ms`
+- `request_id` (UUID v4, also returned as `X-Request-ID` response header)
+- For `/api/query` requests: `backend` used
+
+Log level and format are configured via environment variables. The structured format is designed for ingestion by log aggregators (ELK, Datadog, Loki).
 
 ## Tech Stack
 

@@ -138,6 +138,40 @@ main {
 #submit-btn:hover { opacity: 0.9; }
 #submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Example query chips */
+.example-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding: 0 4px;
+}
+
+.chips-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(88, 166, 255, 0.08);
+}
+
 /* Loading / Pipeline Progress */
 #loading {
     display: none;
@@ -395,6 +429,16 @@ main {
 .bundle-export-btn.exported {
     border-color: var(--consistent);
     color: var(--consistent);
+}
+
+.bundle-export-btn.pdf {
+    border-color: var(--uncertain);
+    color: var(--uncertain);
+}
+
+.bundle-export-btn.pdf:hover {
+    background: rgba(210, 153, 34, 0.1);
+    border-color: var(--uncertain);
 }
 
 .seal-status {

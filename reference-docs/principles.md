@@ -81,7 +81,7 @@ Every response carries a cryptographic hash chain that proves the audit trail ha
 Every response can be exported as a self-contained proof bundle that anyone can verify independently, without Glass running. Trust is not trapped inside the application.
 
 - The proof bundle is a single JSON file containing: the query, the full response, all claims with verification status, the complete audit trail, the provenance seal, and a description of the verification algorithm
-- The bundle is downloadable from the UI with one click and from the API with one GET request
+- The bundle is downloadable from the UI with one click and from the API with one GET request (JSON or PDF format)
 - Anyone can verify the bundle by recomputing the SHA-256 chain from the raw events -- no Glass installation, no API key, no trust required
 - The bundle is human-readable: every field is labeled, every operation is described in plain language, timestamps are ISO 8601
 - The bundle includes a `verification_instructions` field that describes the exact algorithm to verify the seal, so a third party can write their own verifier

@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from glass.audit import AuditTrail, AuditedTimer, build_proof_bundle, content_hash, verify_seal
@@ -21,10 +21,15 @@ from glass.db import (
 )
 from glass.decomposer import check_premises, decompose_claims
 from glass.generator import detect_backend, generate
+from glass.logging_config import RequestLoggingMiddleware, configure_logging
 from glass.models import AuditEvent, GlassResponse, QueryRequest, StatusResponse
+from glass.pdf_export import generate_proof_pdf
 from glass.verifier import verify_claims
 
-logger = logging.getLogger(__name__)
+# Configure structured JSON logging before anything else
+configure_logging()
+
+logger = logging.getLogger("glass")
 
 settings = Settings.from_env()
 
@@ -60,6 +65,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 
 app = FastAPI(title="Glass", description="AI that shows its work — all of it", lifespan=lifespan)
+
+# Add structured logging middleware
+app.add_middleware(RequestLoggingMiddleware)
 
 
 @app.get("/")
@@ -240,6 +248,105 @@ async def export_proof_bundle(response_id: str):
     }
 
     return bundle
+
+
+@app.get("/api/response/{response_id}/bundle.pdf")
+async def export_proof_bundle_pdf(response_id: str):
+    """Export a proof bundle as a formatted PDF document.
+
+    Generates a professional PDF with header, self-attestation disclosure,
+    claims table, audit trail, provenance seal, verification instructions,
+    reviewer signature block, and EU AI Act Article 12 reference.
+
+    "My legal counsel doesn't accept JSON files. She needs a document with
+    a header, a date, and something that looks like a signature block."
+    — product_manager_dan, feedback round 4
+    """
+    resp = get_response(settings.db_path, response_id)
+    if resp is None:
+        raise HTTPException(status_code=404, detail="Response not found")
+
+    bundle = build_proof_bundle(resp)
+
+    # Verify the seal inline so the bundle includes verification status
+    is_valid, message = verify_seal(resp.audit_trail)
+    if is_valid and resp.audit_trail:
+        recomputed = resp.audit_trail[-1].chain_hash
+        if resp.provenance_seal and resp.provenance_seal != recomputed:
+            is_valid = False
+            message = "Stored seal does not match recomputed chain"
+
+    bundle["seal_status"] = {
+        "chain_intact": is_valid,
+        "message": message,
+        "events_checked": len(resp.audit_trail),
+    }
+
+    pdf_bytes = generate_proof_pdf(bundle)
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="glass-proof-{response_id[:8]}.pdf"',
+        },
+    )
+
+
+# --- Health probes (liveness + readiness split for k8s) ---
+# SRE feedback: "Health endpoint conflates liveness and readiness"
+# — sre_on_call, feedback round 3
+
+@app.get("/healthz")
+async def healthz():
+    """Liveness probe — returns 200 if the process is running.
+
+    This endpoint should ALWAYS return 200 as long as the Python process
+    is alive and the HTTP server is accepting connections. It does NOT
+    check backend availability or database state.
+    """
+    return {"status": "alive"}
+
+
+@app.get("/readyz")
+async def readyz():
+    """Readiness probe — returns 200 only if Glass can serve queries.
+
+    Checks:
+    1. LLM backend is available (cached detection)
+    2. Database is accessible (can connect and query)
+
+    Returns 503 if not ready, with details about what's missing.
+    """
+    checks = {}
+    ready = True
+
+    # Check LLM backend
+    backend = await _get_backend()
+    if backend:
+        checks["llm_backend"] = {"status": "ok", "backend": backend}
+    else:
+        checks["llm_backend"] = {"status": "unavailable", "backend": None}
+        ready = False
+
+    # Check database
+    try:
+        import sqlite3
+        conn = sqlite3.connect(settings.db_path, timeout=2)
+        conn.execute("SELECT 1")
+        conn.close()
+        checks["database"] = {"status": "ok", "path": settings.db_path}
+    except Exception as exc:
+        checks["database"] = {"status": "error", "detail": str(exc)}
+        ready = False
+
+    if not ready:
+        raise HTTPException(
+            status_code=503,
+            detail={"status": "not_ready", "checks": checks},
+        )
+
+    return {"status": "ready", "checks": checks}
 
 
 @app.get("/api/memory")

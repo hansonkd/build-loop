@@ -216,7 +216,8 @@ function renderResponse(data) {
                 </div>
                 <div class="provenance-actions">
                     <button class="seal-verify-btn" onclick="verifySeal('${responseId}', this)">Check Chain</button>
-                    <button class="bundle-export-btn" onclick="exportBundle('${responseId}', this)">Export Proof</button>
+                    <button class="bundle-export-btn" onclick="exportBundle('${responseId}', this)">Export JSON</button>
+                    <button class="bundle-export-btn pdf" onclick="exportBundlePdf('${responseId}', this)">Export PDF</button>
                 </div>
             </div>
             <div class="self-attestation-notice">
@@ -250,6 +251,10 @@ function renderResponse(data) {
     `;
 
     responsesDiv.insertAdjacentHTML('afterbegin', html);
+
+    // Hide example chips after first response
+    const chipsEl = document.getElementById('example-chips');
+    if (chipsEl) chipsEl.style.display = 'none';
 }
 
 function toggleReasoning(id) {
@@ -347,6 +352,55 @@ queryForm.addEventListener('submit', async (e) => {
         clearPipelineStages();
     }
 });
+
+// Example query chips
+document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        const query = chip.dataset.query;
+        if (query && backendAvailable) {
+            queryInput.value = query;
+            queryForm.dispatchEvent(new Event('submit'));
+        }
+    });
+});
+
+// Hide chips after first query
+const chipsDiv = document.getElementById('example-chips');
+const originalSubmit = queryForm.onsubmit;
+
+function hideChipsOnFirstResponse() {
+    if (chipsDiv && responsesDiv.children.length > 0) {
+        chipsDiv.style.display = 'none';
+    }
+}
+
+// PDF export handler
+async function exportBundlePdf(responseId, btnEl) {
+    btnEl.disabled = true;
+    btnEl.textContent = 'Generating PDF...';
+    try {
+        const resp = await fetch(`/api/response/${responseId}/bundle.pdf`);
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `glass-proof-${responseId.substring(0, 8)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        btnEl.textContent = 'PDF Exported';
+        btnEl.className = 'bundle-export-btn exported';
+        setTimeout(() => {
+            btnEl.textContent = 'Export PDF';
+            btnEl.className = 'bundle-export-btn pdf';
+            btnEl.disabled = false;
+        }, 2000);
+    } catch (err) {
+        btnEl.textContent = 'Error';
+        btnEl.disabled = false;
+    }
+}
 
 // Init
 checkStatus();

@@ -64,3 +64,17 @@ The honest-AI gap is no longer just about hallucination. It is about the entire 
 - **Portable proof for a post-trust world** -- When LiteLLM is poisoned for 40 minutes and hits hundreds of thousands of machines, when courts publish AI-hallucinated citations, when police arrest innocent people based on AI matches nobody can audit -- the demand is not just "show me what happened" but "give me proof I can take to someone who wasn't there." Exportable proof bundles make Glass's audit trail a first-class document: downloadable, shareable, archivable, and independently verifiable without Glass running.
 
 The first system that makes AI operations watchable in real time -- with cryptographic proof that the record is unaltered and exportable proof that anyone can verify -- does not just build a better chatbot. It establishes the norm that AI systems must be observable, provably honest, and accountable to third parties.
+
+### The Compliance Pivot: From Cultural Statement to Market Entry
+
+After 13 persona reviews across 4 feedback rounds, the primary user has been refined from "developers" to **compliance teams at AI-using companies** -- VPs of Compliance, GRC analysts, legal teams. The willingness to pay is high ($20K-100K/year for compliant tooling), and the market timing is urgent: EU AI Act Article 12 (record-keeping for high-risk AI) begins full enforcement in August 2026, four months away.
+
+This does not mean Glass abandons its cultural origins. It means the *same architecture* -- process visibility, tamper-evident audit trails, portable proof bundles -- now has a buyer who needs it for regulatory survival, not just philosophical conviction.
+
+Key features for the compliance market:
+- **PDF proof bundles** with header, signature block, control references, and EU AI Act Article 12 framing
+- **Structured JSON logging** with request IDs for log aggregator ingestion
+- **Health/readiness probe split** (/healthz + /readyz) for production deployment
+- **Plain-language landing page** written for compliance buyers, not developers
+
+The contrarian's challenge remains valid: Glass proves "we did what we said we did" but cannot prove "what we did was right." The self-attestation disclosure is embedded in every proof bundle -- PDF and JSON -- and prominently displayed on every landing page. Owning this ceiling explicitly makes the product defensible. Hiding it would invite a takedown.

@@ -44,17 +44,17 @@ The loop will create session-scoped goal and evaluation files, then start workin
 
 Each Claude session gets its own goal, evaluation criteria, feedback, and log — so multiple sessions can work on the same project with different missions. Session state lives at `reference-docs/sessions/<session-id>/`.
 
-**Named sessions make this much easier to manage.** Start Claude Code with a name:
+**Named sessions make this much easier to manage:**
 
 ```bash
 # Start a named session
-claude --name "feature-auth"
+claude -n "feature-auth"
 
-# In another terminal, a different mission on the same project
-claude --name "fix-perf"
+# Or rename the current session at any time
+/rename feature-auth
 
-# Each has its own goal, evaluation, and feedback
-# Both share the same specs and code, coordinated via git
+# You can also rename from the session picker
+/resume  # then press R on any session to rename it
 ```
 
 Without named sessions, you get auto-generated session IDs that are harder to track.

@@ -48,6 +48,7 @@ Glass auto-detects available backends in priority order:
 | `OPENROUTER_MODEL` | `anthropic/claude-sonnet-4` | OpenRouter model to use |
 | `ANTHROPIC_API_KEY` | (none) | Enables Claude backend |
 | `CLAUDE_MODEL` | `claude-sonnet-4-20250514` | Claude model to use |
+| `GLASS_API_TOKEN` | (none) | Bearer token for API auth; unset = open access |
 | `GLASS_DB_PATH` | `glass.db` | SQLite database path |
 | `GLASS_HOST` | `0.0.0.0` | Server bind address |
 | `GLASS_PORT` | `7777` | Server port |
@@ -72,6 +73,20 @@ Glass auto-detects available backends in priority order:
 | `GET` | `/api/response/{id}/verify` | Recompute provenance chain and verify the seal is intact |
 | `GET` | `/api/response/{id}/bundle` | Export self-contained JSON proof bundle for independent verification |
 | `GET` | `/api/response/{id}/bundle.pdf` | Export proof bundle as formatted PDF with signature block |
+
+### Streaming
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/query/stream` | Submit a query and receive Server-Sent Events as each pipeline stage completes. Events: `stage`, `result`, `error` |
+
+### Calibration
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/calibrate` | Submit a ground-truth judgment for a specific claim (correct/incorrect/ambiguous) |
+| `GET` | `/api/calibration?backend=ollama` | Get calibration metrics: per-status accuracy, overall accuracy, calibration gap |
+| `GET` | `/api/calibration/judgments?response_id=...` | List recorded ground-truth judgments |
 
 ### Compliance
 
@@ -106,3 +121,26 @@ query -> generator.py (LLM call)
 ```
 
 All LLM calls use connection-pooled httpx clients (created once at startup, reused for the app lifetime) to avoid per-call TCP+TLS handshake overhead. The Anthropic SDK client is also a singleton.
+
+## Authentication
+
+Set `GLASS_API_TOKEN` to enable Bearer token auth on all `/api/*` endpoints. Health probes (`/healthz`, `/readyz`) and static assets are always public. When unset, Glass runs in open-access mode (suitable for local development).
+
+```bash
+export GLASS_API_TOKEN="your-secret-token"
+curl -H "Authorization: Bearer your-secret-token" http://localhost:7777/api/status
+```
+
+## Calibration
+
+Glass now supports empirical calibration measurement. Submit ground-truth judgments for past claims via `POST /api/calibrate`, then query `GET /api/calibration` to see what fraction of "consistent" claims were actually correct. This answers the hard question: when Glass says "consistent", how often is that actually true?
+
+```bash
+# Submit a judgment
+curl -X POST http://localhost:7777/api/calibrate \
+  -H "Content-Type: application/json" \
+  -d '{"response_id": "...", "claim_index": 0, "ground_truth": "correct", "reviewer": "alice"}'
+
+# View calibration metrics
+curl http://localhost:7777/api/calibration
+```

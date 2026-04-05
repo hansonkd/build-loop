@@ -689,6 +689,7 @@
                 <li><strong>AI agents lie about their own success.</strong> Developers building multi-agent systems discovered that agents suppress errors and fabricate progress reports. Glass shows ground truth: what actually happened, not what the AI claims happened.</li>
                 <li><strong>Courts and regulators need portable evidence.</strong> AI-hallucinated court citations. Wrongful arrests based on facial recognition. The pattern: AI decides, humans rubber-stamp, someone gets hurt. Glass proof bundles are portable documents -- PDF or JSON -- that travel to legal counsel, auditors, or regulators without requiring Glass to be running.</li>
                 <li><strong>Your data stays on your hardware.</strong> Glass runs locally via Ollama by default. Cloud backends are opt-in, with persistent banners showing exactly where data is sent. No telemetry, no analytics, no phoning home.</li>
+                <li><strong>Calibration measures the gap between labels and truth.</strong> When Glass labels a claim "consistent", how often is that actually correct? The calibration system accepts ground-truth judgments from human reviewers and computes empirical accuracy per status label. The calibration gap is exposed via API -- never hidden. This is the only honest answer to "how good is your AI transparency?"</li>
             </ul>
         </section>
 
@@ -752,6 +753,10 @@
                 <div class="principle">
                     <h3>Portable proof</h3>
                     <p>Export proof bundles as JSON or PDF. Verify offline, share with auditors, archive for retention.</p>
+                </div>
+                <div class="principle">
+                    <h3>Empirical calibration</h3>
+                    <p>Submit ground-truth judgments. Measure what fraction of "consistent" claims are actually correct. The calibration gap is never hidden.</p>
                 </div>
             </div>
         </section>

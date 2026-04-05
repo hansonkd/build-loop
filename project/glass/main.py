@@ -1,3 +1,5 @@
+import asyncio
+import json as json_module
 import logging
 import uuid
 from collections.abc import AsyncGenerator
@@ -8,8 +10,17 @@ import httpx
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.responses import StreamingResponse
 
 from glass.audit import AuditTrail, AuditedTimer, build_proof_bundle, content_hash, verify_seal
+from glass.auth import BearerAuthMiddleware
+from glass.calibration import (
+    CalibrationReport,
+    GroundTruthJudgment,
+    compute_calibration,
+    list_judgments,
+    record_judgment,
+)
 from glass.config import Settings
 from glass.db import (
     delete_memory,
@@ -91,6 +102,10 @@ app = FastAPI(title="Glass", description="AI that shows its work — all of it",
 
 # Add structured logging middleware
 app.add_middleware(RequestLoggingMiddleware)
+
+# Add bearer token auth — only active when GLASS_API_TOKEN is set.
+# Health probes and static assets are always public.
+app.add_middleware(BearerAuthMiddleware)
 
 
 @app.get("/")
@@ -417,6 +432,142 @@ async def memory_delete(memory_id: str):
     if not delete_memory(settings.db_path, memory_id):
         raise HTTPException(status_code=404, detail="Memory entry not found")
     return {"status": "deleted"}
+
+
+# --- SSE Streaming Query Endpoint ---
+# "Glass should never fake its own process." The previous UI used setTimeout
+# timers to simulate pipeline stages. This endpoint streams real events as
+# each stage completes, replacing animation with ground truth.
+
+@app.post("/api/query/stream")
+async def query_stream(req: QueryRequest):
+    """Submit a query and receive Server-Sent Events as each pipeline stage completes.
+
+    Events:
+      - stage: {name, status} — pipeline stage started/completed
+      - result: full GlassResponse JSON — final result
+      - error: {detail} — if something goes wrong
+
+    This replaces fake setTimeout animation with real pipeline progress.
+    A transparency tool must not simulate its own process.
+    """
+    backend = await _get_backend()
+    if backend is None:
+        async def error_stream():
+            yield f"event: error\ndata: {json_module.dumps({'detail': 'No model backend is available.'})}\n\n"
+        return StreamingResponse(error_stream(), media_type="text/event-stream")
+
+    async def event_stream():
+        http_client = getattr(app.state, "http_client", None)
+        anthropic_client = getattr(app.state, "anthropic_client", None)
+
+        trail = AuditTrail()
+
+        def sse(event: str, data: dict) -> str:
+            return f"event: {event}\ndata: {json_module.dumps(data)}\n\n"
+
+        # Stage 1: Generate
+        yield sse("stage", {"name": "generate", "status": "started"})
+        try:
+            raw_response, reasoning_trace = await generate(req.query, backend, settings, trail, http_client=http_client, anthropic_client=anthropic_client)
+        except Exception as exc:
+            logger.error("Generation failed: %s", exc)
+            trail.record(
+                operation="llm_call",
+                description=f"Generate response — FAILED: {type(exc).__name__}: {exc}",
+                backend=backend, latency_ms=0, bytes_sent=len(req.query.encode()),
+                bytes_received=0, destination="error",
+            )
+            yield sse("error", {"detail": f"LLM generation failed: {exc}"})
+            return
+        yield sse("stage", {"name": "generate", "status": "done"})
+
+        # Stage 2: Premise check + Decompose (in parallel)
+        yield sse("stage", {"name": "decompose", "status": "started"})
+        premise_flags, claims = await asyncio.gather(
+            check_premises(req.query, backend, settings, trail, http_client=http_client, anthropic_client=anthropic_client),
+            decompose_claims(raw_response, backend, settings, trail, http_client=http_client, anthropic_client=anthropic_client),
+        )
+        yield sse("stage", {"name": "decompose", "status": "done"})
+
+        # Stage 3: Verify claims
+        yield sse("stage", {"name": "verify", "status": "started"})
+        claims = await verify_claims(claims, reasoning_trace, backend, settings, trail, http_client=http_client, anthropic_client=anthropic_client)
+        yield sse("stage", {"name": "verify", "status": "done"})
+
+        # Stage 4: Audit + Seal
+        yield sse("stage", {"name": "seal", "status": "started"})
+        response = GlassResponse(
+            id=str(uuid.uuid4()),
+            query=req.query,
+            raw_response=raw_response,
+            reasoning_trace=reasoning_trace,
+            claims=claims,
+            premise_flags=premise_flags,
+            audit_trail=trail.to_list(),
+            provenance_seal="",
+            backend=backend,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+        )
+
+        with AuditedTimer() as timer:
+            save_response(settings.db_path, response)
+        trail.record(
+            operation="db_write",
+            description="Save response to local SQLite database",
+            backend=None, latency_ms=timer.elapsed_ms,
+            bytes_sent=0, bytes_received=0,
+            destination="local/sqlite",
+            content_hash=content_hash(response.id),
+        )
+
+        response.audit_trail = trail.to_list()
+        response.provenance_seal = trail.seal()
+        save_response(settings.db_path, response, upsert=True)
+        yield sse("stage", {"name": "seal", "status": "done"})
+
+        # Final result
+        yield sse("result", response.model_dump())
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+# --- Calibration Endpoints ---
+# The contrarian's challenge: "Glass is building receipts without guarantees."
+# Calibration answers: what fraction of 'Consistent' claims are actually true?
+
+@app.post("/api/calibrate")
+async def submit_judgment(judgment: GroundTruthJudgment):
+    """Submit a ground-truth judgment for a specific claim.
+
+    This records whether a claim Glass labeled 'consistent', 'uncertain',
+    or 'unverifiable' was actually correct, incorrect, or ambiguous in
+    the real world. Over time, these judgments build a calibration profile.
+    """
+    try:
+        result = record_judgment(settings.db_path, judgment)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    return result
+
+
+@app.get("/api/calibration")
+async def get_calibration(backend: str | None = Query(None, description="Filter by backend")):
+    """Get calibration metrics computed from all ground-truth judgments.
+
+    Returns per-status accuracy, overall accuracy, and calibration gap.
+    The calibration gap measures the difference between the implied accuracy
+    of a 'consistent' label (100%) and the observed accuracy. A gap of 0
+    means perfect calibration; a gap of 0.3 means 30% of 'consistent'
+    claims were actually incorrect.
+    """
+    return compute_calibration(settings.db_path, backend=backend)
+
+
+@app.get("/api/calibration/judgments")
+async def get_judgments(response_id: str | None = Query(None, description="Filter by response ID")):
+    """List recorded ground-truth judgments."""
+    return list_judgments(settings.db_path, response_id=response_id)
 
 
 def cli():

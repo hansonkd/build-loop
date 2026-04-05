@@ -304,26 +304,18 @@ queryForm.addEventListener('submit', async (e) => {
     submitBtn.disabled = true;
     loading.classList.add('visible');
 
-    // Animate pipeline stages
+    // Clear previous stage states
     clearPipelineStages();
-    setPipelineStage('generate');
 
-    // Simulate stage progression (actual timing comes from the server)
-    const stageTimers = [];
-    stageTimers.push(setTimeout(() => setPipelineStage('decompose'), 3000));
-    stageTimers.push(setTimeout(() => setPipelineStage('verify'), 6000));
-    stageTimers.push(setTimeout(() => setPipelineStage('audit'), 9000));
-    stageTimers.push(setTimeout(() => setPipelineStage('seal'), 11000));
-
+    // Use SSE streaming endpoint for real pipeline progress.
+    // A transparency tool must not simulate its own process —
+    // every stage indicator reflects actual server-side completion.
     try {
-        const resp = await fetch('/api/query', {
+        const resp = await fetch('/api/query/stream', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query }),
         });
-
-        // Clear stage timers
-        stageTimers.forEach(clearTimeout);
 
         if (!resp.ok) {
             const err = await resp.json();
@@ -331,20 +323,64 @@ queryForm.addEventListener('submit', async (e) => {
             return;
         }
 
-        const data = await resp.json();
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let finalData = null;
 
-        // Mark all stages done
-        ['generate', 'decompose', 'verify', 'audit', 'seal'].forEach(s => {
-            const el = document.getElementById('stage-' + s);
-            if (el) {
-                el.classList.remove('active');
-                el.classList.add('done');
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();  // keep incomplete line
+
+            let currentEvent = null;
+            for (const line of lines) {
+                if (line.startsWith('event: ')) {
+                    currentEvent = line.substring(7);
+                } else if (line.startsWith('data: ') && currentEvent) {
+                    const data = JSON.parse(line.substring(6));
+
+                    if (currentEvent === 'stage') {
+                        const stageEl = document.getElementById('stage-' + data.name);
+                        if (stageEl) {
+                            if (data.status === 'started') {
+                                stageEl.classList.add('active');
+                                stageEl.classList.remove('done');
+                            } else if (data.status === 'done') {
+                                stageEl.classList.remove('active');
+                                stageEl.classList.add('done');
+                            }
+                        }
+                        // Map decompose+verify done to mark audit stage
+                        if (data.name === 'verify' && data.status === 'done') {
+                            const auditEl = document.getElementById('stage-audit');
+                            if (auditEl) auditEl.classList.add('done');
+                        }
+                    } else if (currentEvent === 'result') {
+                        finalData = data;
+                    } else if (currentEvent === 'error') {
+                        alert(data.detail || 'Query failed');
+                    }
+                    currentEvent = null;
+                }
             }
-        });
+        }
 
-        renderResponse(data);
+        if (finalData) {
+            // Mark all stages done
+            ['generate', 'decompose', 'verify', 'audit', 'seal'].forEach(s => {
+                const el = document.getElementById('stage-' + s);
+                if (el) {
+                    el.classList.remove('active');
+                    el.classList.add('done');
+                }
+            });
+            renderResponse(finalData);
+        }
     } catch (err) {
-        stageTimers.forEach(clearTimeout);
         alert('Request failed: ' + err.message);
     } finally {
         submitBtn.disabled = false;

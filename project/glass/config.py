@@ -10,6 +10,7 @@ class Settings:
     openrouter_model: str = "anthropic/claude-sonnet-4"
     anthropic_api_key: str | None = None
     claude_model: str = "claude-sonnet-4-20250514"
+    api_token: str | None = None  # Bearer token for API auth; None = open access
     db_path: str = "glass.db"
     host: str = "0.0.0.0"
     port: int = 7777
@@ -23,6 +24,7 @@ class Settings:
             openrouter_model=os.environ.get("OPENROUTER_MODEL", cls.openrouter_model),
             anthropic_api_key=os.environ.get("ANTHROPIC_API_KEY"),
             claude_model=os.environ.get("CLAUDE_MODEL", cls.claude_model),
+            api_token=os.environ.get("GLASS_API_TOKEN"),
             db_path=os.environ.get("GLASS_DB_PATH", cls.db_path),
             host=os.environ.get("GLASS_HOST", cls.host),
             port=int(os.environ.get("GLASS_PORT", str(cls.port))),

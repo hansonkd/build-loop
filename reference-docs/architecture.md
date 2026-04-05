@@ -175,6 +175,10 @@ All endpoints are served by FastAPI.
 | GET | `/api/status` | Backend health check (is Ollama running? which model?) |
 | GET | `/healthz` | Liveness probe — returns 200 if the process is running (for k8s/load balancers) |
 | GET | `/readyz` | Readiness probe — returns 200 only if an LLM backend is available and the database is accessible |
+| POST | `/api/query/stream` | SSE streaming query — real pipeline progress events instead of fake animation |
+| POST | `/api/calibrate` | Submit ground-truth judgment for a claim (correct/incorrect/ambiguous) |
+| GET | `/api/calibration` | Calibration metrics — per-status accuracy, calibration gap |
+| GET | `/api/calibration/judgments` | List recorded ground-truth judgments |
 
 ## Logging
 
@@ -206,6 +210,8 @@ project/
 │   ├── verifier.py      # Claim consistency checking
 │   ├── llm_client.py    # Shared LLM call + JSON extraction (used by decomposer & verifier)
 │   ├── audit.py         # Audit trail collection and persistence
+│   ├── auth.py          # Bearer token authentication middleware
+│   ├── calibration.py   # Ground-truth judgments + calibration metrics
 │   ├── models.py        # Pydantic models (Claim, AuditEvent, Response, Memory)
 │   ├── db.py            # SQLite operations (WAL mode enabled)
 │   └── config.py        # Settings, backend selection

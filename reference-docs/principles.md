@@ -87,3 +87,34 @@ Every response can be exported as a self-contained proof bundle that anyone can 
 - The bundle includes a `verification_instructions` field that describes the exact algorithm to verify the seal, so a third party can write their own verifier
 - The bundle never contains secrets, API keys, or identifying information about the user -- only the process and its proof
 - Export is always available, even when no backend is connected -- proof of past responses is never gated behind a running service
+
+## 9. Empirical Calibration
+
+Glass measures its own accuracy empirically. When Glass says "consistent", it should be possible to ask: how often is that actually true? Calibration is the bridge between self-attestation and external validation.
+
+- Human reviewers can submit ground-truth judgments for any past claim
+- The calibration system computes per-status accuracy: what fraction of "consistent" claims were actually correct?
+- The calibration gap (difference between implied 100% and actual accuracy) is exposed via API, never hidden
+- Sample size sufficiency is reported: at least 30 judgments per status label for statistical significance
+- Calibration improves over time through better models, tighter prompts, or domain-specific tuning -- and that improvement is measurable
+- This is tedious empirical work, not a technical trick. It is the only honest answer to "how good is your transparency?"
+
+## 10. No Simulated Transparency
+
+Glass never fakes its own process. If a pipeline stage hasn't completed on the server, the UI must not show it as complete. Progress indicators reflect actual server-side state, not timers or animation.
+
+- The SSE streaming endpoint emits real events as each pipeline stage completes
+- The frontend renders these events as they arrive -- no setTimeout, no simulation
+- A transparency tool that simulates its own transparency is a contradiction
+- This principle extends to error reporting: if a stage fails, the failure is shown immediately, not masked
+
+## 11. Access Control Without Obscurity
+
+When deployed in production, Glass API endpoints require bearer token authentication. Security is not optional for a compliance tool.
+
+- Set GLASS_API_TOKEN to enable auth on all /api/* endpoints
+- Health probes (/healthz, /readyz) are always public (required for k8s/load balancers)
+- Static assets (/, /static/*) are always public (required for browser loading)
+- When no token is configured, Glass runs in open-access mode (local dev)
+- Token comparison uses constant-time comparison to prevent timing attacks
+- Auth is a security boundary, not an obscurity mechanism -- the tool remains open source and auditable

@@ -78,3 +78,24 @@ Key features for the compliance market:
 - **Plain-language landing page** written for compliance buyers, not developers
 
 The contrarian's challenge remains valid: Glass proves "we did what we said we did" but cannot prove "what we did was right." The self-attestation disclosure is embedded in every proof bundle -- PDF and JSON -- and prominently displayed on every landing page. Owning this ceiling explicitly makes the product defensible. Hiding it would invite a takedown.
+
+### The Calibration Turn: Measuring the Ceiling
+
+The contrarian's hardest question -- "what fraction of Consistent claims are actually true?" -- cannot be answered by architecture alone. It requires tedious empirical work: humans judging whether individual claims Glass labeled "consistent" turned out to be correct in the real world.
+
+Glass v0.6 answers this directly with a **calibration system**. Human reviewers submit ground-truth judgments for past claims. The system computes:
+- **Per-status accuracy**: of all claims Glass labeled "consistent", what fraction were actually correct?
+- **Calibration gap**: the difference between the implied accuracy (100% for "consistent") and the observed accuracy. A gap of 0.3 means 30% of "consistent" claims were wrong.
+- **Sample size sufficiency**: whether enough judgments exist (>= 30 per status) for statistical significance.
+
+This moves Glass from "receipts without guarantees" to "receipts with empirical measurement." The calibration gap is the project's honesty metric -- exposed via API, never hidden. When the gap is large, Glass is being honest about its dishonesty. When it shrinks over time (through better models, tighter prompts, or domain-specific tuning), that improvement is measurable.
+
+The HN signal is clear: the Zero-Error Horizon paper (April 2026) argues that "know your model's error-free envelope, not just its mean score." Calibration is Glass's answer to this for LLM transparency -- not benchmarks, not averages, but the empirical fraction of correct claims per confidence label.
+
+### The Streaming Turn: Ground Truth in Real Time
+
+The HN community's "dangerously sanitized optimism" finding -- that agents lie about their own progress -- has a subtle implication for Glass itself. The previous Glass UI used `setTimeout` timers to animate pipeline stages, showing fake progress while the server processed the query. This is exactly the kind of process simulation that Glass exists to eliminate.
+
+Glass v0.6 replaces this with **Server-Sent Events (SSE)**. The `/api/query/stream` endpoint emits real events as each pipeline stage completes on the server. The frontend renders these events as they arrive -- no timers, no simulation, no fake animation. Every stage indicator in the UI reflects actual server-side completion.
+
+A transparency tool that simulates its own transparency is a contradiction. The SSE pipeline is the fix.

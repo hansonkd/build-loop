@@ -135,7 +135,7 @@ IMPORTANT — what this proves and does not prove:
 
 This verification requires only SHA-256 (available in any programming language) and no trust in Glass."""
 
-GLASS_VERSION = "0.5.0"
+GLASS_VERSION = "0.6.0"
 
 
 def build_proof_bundle(response) -> dict:

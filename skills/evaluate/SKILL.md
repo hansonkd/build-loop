@@ -9,7 +9,10 @@ effort: high
 
 # Evaluate — Would Real People Use This?
 
-Launch sonnet subagents that test the product using the method in `reference-docs/evaluation.md`.
+Launch sonnet subagents that test the product using this session's evaluation method.
+
+## Session isolation
+Read goal from `reference-docs/sessions/${CLAUDE_SESSION_ID}/goal.md`. Read evaluation method from `reference-docs/sessions/${CLAUDE_SESSION_ID}/evaluation.md`. Write results to `reference-docs/sessions/${CLAUDE_SESSION_ID}/feedback-eval-YYYY-MM-DD.md`. Also scan other sessions' feedback for relevant findings.
 
 ## Two modes
 
@@ -31,9 +34,9 @@ Focused evaluations are cheaper and catch regressions. Full evaluations are expe
 
 ## What to do
 
-1. Read `reference-docs/goal.md` for the **Pain** and target user.
-2. Read `reference-docs/evaluation.md` for the full evaluation method.
-3. Read previous evaluation feedback files to avoid repeating the same findings.
+1. Read this session's `goal.md` for the **Pain** and target user.
+2. Read this session's `evaluation.md` for the full evaluation method.
+3. Read this session's previous feedback files to avoid repeating the same findings.
 
 4. Launch sonnet subagents. Each gets:
    - The evaluation method (tells them how to test)
@@ -42,7 +45,7 @@ Focused evaluations are cheaper and catch regressions. Full evaluations are expe
    - Instruction: "Answer honestly. Would you use this daily? Would you pay? What's missing? Is this a painkiller or a vitamin?"
    - **Critical:** "Don't evaluate the architecture or code quality. Evaluate whether this solves a real pain."
 
-5. Synthesize into `reference-docs/feedback-eval-YYYY-MM-DD.md`:
+5. Synthesize into `reference-docs/sessions/${CLAUDE_SESSION_ID}/feedback-eval-YYYY-MM-DD.md`:
 
 ```markdown
 # Evaluation — YYYY-MM-DD (full/focused)

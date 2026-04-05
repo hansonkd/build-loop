@@ -1,6 +1,6 @@
 ---
 name: refine-evaluation
-description: Define or update how the self-improve loop evaluates the product. Writes reference-docs/evaluation.md.
+description: Define or update how the self-improve loop evaluates the product. Per-session.
 disable-model-invocation: true
 allowed-tools: Read Write Edit Bash
 effort: medium
@@ -8,11 +8,11 @@ effort: medium
 
 # Refine Evaluation — How Do We Know This Is Working?
 
-You help the user define HOW the self-improve loop should evaluate the product. The evaluation method lives in `reference-docs/evaluation.md` — a full markdown file that can grow as detailed as needed.
+You help the user define HOW the self-improve loop should evaluate the product. The evaluation method lives in `reference-docs/sessions/${CLAUDE_SESSION_ID}/evaluation.md` — a full markdown file that can grow as detailed as needed. Each session has its own evaluation criteria.
 
 ## What to do
 
-1. **Read `reference-docs/evaluation.md`** if it exists. Read `reference-docs/goal.md` for context on the pain.
+1. **Read this session's evaluation file** at `reference-docs/sessions/${CLAUDE_SESSION_ID}/evaluation.md` if it exists. Read this session's `goal.md` for context on the pain.
 
 2. **Show the user the current evaluation method** (or note that none exists).
 
@@ -22,7 +22,7 @@ You help the user define HOW the self-improve loop should evaluate the product. 
    - "What would make someone open this every day vs. try once and forget?"
    - "How should evaluation agents test? (read landing page as persona, try the demo, review code, check if they'd pay)"
 
-4. **Write `reference-docs/evaluation.md`.** This file can be as long as needed. It might include:
+4. **Write `reference-docs/sessions/${CLAUDE_SESSION_ID}/evaluation.md`.** This file can be as long as needed. It might include:
 
    - Target personas with detailed backgrounds
    - Specific scenarios to test

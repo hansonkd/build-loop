@@ -38,7 +38,26 @@ Or do it all in one shot:
 /loop 30m /self-improve 20 "Help developers catch AI-generated bugs before merge"
 ```
 
-The loop will create `reference-docs/goal.md` and `reference-docs/evaluation.md` in your project, then start working.
+The loop will create session-scoped goal and evaluation files, then start working.
+
+## Named Sessions
+
+Each Claude session gets its own goal, evaluation criteria, feedback, and log — so multiple sessions can work on the same project with different missions. Session state lives at `reference-docs/sessions/<session-id>/`.
+
+**Named sessions make this much easier to manage.** Start Claude Code with a name:
+
+```bash
+# Start a named session
+claude --name "feature-auth"
+
+# In another terminal, a different mission on the same project
+claude --name "fix-perf"
+
+# Each has its own goal, evaluation, and feedback
+# Both share the same specs and code, coordinated via git
+```
+
+Without named sessions, you get auto-generated session IDs that are harder to track.
 
 ## What It Does
 
@@ -83,13 +102,13 @@ The loop is spec-driven. Feedback updates specs. Specs drive code. Code never dr
 
 | Question | Source |
 |----------|--------|
-| What should this be? | `reference-docs/` (goal + specs) |
+| What should this be? | `reference-docs/` (shared specs) + session's `goal.md` |
 | What is this now? | The code |
-| Why did it change? | `.claude/loop-log.md` |
+| Why did it change? | `.claude/sessions/<id>/loop-log.md` |
 
 ### The Goal File
 
-`reference-docs/goal.md` is the anchor. Everything derives from it:
+Each session's goal lives at `reference-docs/sessions/<session-id>/goal.md`. It's the anchor — everything this session does derives from it:
 
 ```markdown
 # Goal
@@ -103,7 +122,7 @@ The loop is spec-driven. Feedback updates specs. Specs drive code. Code never dr
 
 ### The Evaluation File
 
-`reference-docs/evaluation.md` tells `/evaluate` how to test the product. It can be as detailed as you want — personas, scenarios, success criteria:
+Each session's evaluation method lives at `reference-docs/sessions/<session-id>/evaluation.md`. It can be as detailed as you want — personas, scenarios, success criteria:
 
 ```markdown
 # Evaluation
@@ -185,6 +204,29 @@ Every skill asks before doing work:
 /build                 # Build the next highest-impact change
 /simplify              # Clean up — what would you delete?
 /align                 # Sync specs with latest feedback
+```
+
+### Run multiple sessions on the same project
+
+```bash
+# Terminal 1: build new features
+claude --name "feature-builder"
+# > /refine-goal  →  "Add OAuth login flow"
+# > /loop 30m /self-improve 15
+
+# Terminal 2: harden existing code
+claude --name "hardener"
+# > /refine-goal  →  "Find and fix edge cases in the API"
+# > /loop 1h /self-improve 10
+
+# Terminal 3: evaluate the product
+claude --name "evaluator"
+# > /refine-goal  →  "Test the product as target users, surface what's broken"
+# > /loop 2h /self-improve 5
+
+# Each session has its own goal, evaluation, and feedback
+# All sessions share specs and code, coordinating through git commits
+# Budget management infers other sessions and adjusts pace automatically
 ```
 
 ### Adjust the loop cadence

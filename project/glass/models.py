@@ -27,6 +27,15 @@ class QueryRequest(BaseModel):
     query: str
 
 
+class ComplianceMetadata(BaseModel):
+    control_refs: list[str] = []
+    retention_class: str = ""
+    retention_period_years: int = 0
+    legal_hold: bool = False
+    reviewed_by: str = ""
+    reviewed_at: str = ""
+
+
 class GlassResponse(BaseModel):
     id: str
     query: str
@@ -38,6 +47,7 @@ class GlassResponse(BaseModel):
     provenance_seal: str = ""  # Hash chain head — proves audit trail is unaltered
     backend: str  # "ollama" | "openrouter" | "claude"
     timestamp: str
+    compliance: ComplianceMetadata = ComplianceMetadata()
 
 
 class MemoryEntry(BaseModel):

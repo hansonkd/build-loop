@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 import json
 import logging
+
+import httpx
 
 from glass.audit import AuditTrail
 from glass.config import Settings
@@ -41,7 +45,7 @@ Claims to check:
 
 
 async def verify_claims(
-    claims: list[Claim], reasoning_trace: str, backend: str, settings: Settings, trail: AuditTrail
+    claims: list[Claim], reasoning_trace: str, backend: str, settings: Settings, trail: AuditTrail, http_client: httpx.AsyncClient | None = None, anthropic_client=None,
 ) -> list[Claim]:
     if not claims:
         return claims
@@ -50,7 +54,7 @@ async def verify_claims(
     prompt = VERIFY_PROMPT.format(reasoning=reasoning_trace, claims=claims_text)
 
     try:
-        raw = await call_llm(prompt, backend, settings, trail, "Check claim consistency")
+        raw = await call_llm(prompt, backend, settings, trail, "Check claim consistency", http_client=http_client, anthropic_client=anthropic_client)
     except Exception as exc:
         logger.error("LLM call failed during claim verification: %s", exc)
         trail.record(

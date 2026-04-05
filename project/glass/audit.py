@@ -163,6 +163,7 @@ def build_proof_bundle(response) -> dict:
             "backend": response.backend,
             "timestamp": response.timestamp,
         },
+        "compliance": response.compliance.model_dump() if hasattr(response, "compliance") else {},
         "audit_trail": [e.model_dump() for e in response.audit_trail],
         "provenance_seal": response.provenance_seal,
         "seal_verification": {

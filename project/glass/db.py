@@ -2,7 +2,7 @@ import json
 import sqlite3
 from contextlib import contextmanager
 
-from glass.models import AuditEvent, Claim, GlassResponse, MemoryEntry
+from glass.models import AuditEvent, Claim, ComplianceMetadata, GlassResponse, MemoryEntry
 
 
 @contextmanager
@@ -54,47 +54,45 @@ def init_db(db_path: str) -> None:
             conn.execute("SELECT provenance_seal FROM responses LIMIT 1")
         except sqlite3.OperationalError:
             conn.execute("ALTER TABLE responses ADD COLUMN provenance_seal TEXT NOT NULL DEFAULT ''")
+        # Migrate: add compliance column if missing (upgrades from pre-compliance schema)
+        try:
+            conn.execute("SELECT compliance FROM responses LIMIT 1")
+        except sqlite3.OperationalError:
+            conn.execute("ALTER TABLE responses ADD COLUMN compliance TEXT NOT NULL DEFAULT '{}'")
 
 
 def save_response(db_path: str, resp: GlassResponse, upsert: bool = False) -> None:
+    params = (
+        resp.id,
+        resp.query,
+        resp.raw_response,
+        resp.reasoning_trace,
+        json.dumps([c.model_dump() for c in resp.claims]),
+        json.dumps(resp.premise_flags),
+        json.dumps([e.model_dump() for e in resp.audit_trail]),
+        resp.provenance_seal,
+        resp.backend,
+        resp.timestamp,
+        json.dumps(resp.compliance.model_dump()),
+    )
     with get_conn(db_path) as conn:
         if upsert:
             conn.execute(
-                "INSERT OR REPLACE INTO responses (id, query, raw_response, reasoning_trace, claims, premise_flags, audit_trail, provenance_seal, backend, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    resp.id,
-                    resp.query,
-                    resp.raw_response,
-                    resp.reasoning_trace,
-                    json.dumps([c.model_dump() for c in resp.claims]),
-                    json.dumps(resp.premise_flags),
-                    json.dumps([e.model_dump() for e in resp.audit_trail]),
-                    resp.provenance_seal,
-                    resp.backend,
-                    resp.timestamp,
-                ),
+                "INSERT OR REPLACE INTO responses (id, query, raw_response, reasoning_trace, claims, premise_flags, audit_trail, provenance_seal, backend, timestamp, compliance) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                params,
             )
         else:
             conn.execute(
-                "INSERT INTO responses (id, query, raw_response, reasoning_trace, claims, premise_flags, audit_trail, provenance_seal, backend, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    resp.id,
-                    resp.query,
-                    resp.raw_response,
-                    resp.reasoning_trace,
-                    json.dumps([c.model_dump() for c in resp.claims]),
-                    json.dumps(resp.premise_flags),
-                    json.dumps([e.model_dump() for e in resp.audit_trail]),
-                    resp.provenance_seal,
-                    resp.backend,
-                    resp.timestamp,
-                ),
+                "INSERT INTO responses (id, query, raw_response, reasoning_trace, claims, premise_flags, audit_trail, provenance_seal, backend, timestamp, compliance) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                params,
             )
 
 
 def _row_to_response(row: sqlite3.Row) -> GlassResponse:
     audit_raw = row["audit_trail"] if "audit_trail" in row.keys() else "[]"
     seal = row["provenance_seal"] if "provenance_seal" in row.keys() else ""
+    compliance_raw = row["compliance"] if "compliance" in row.keys() else "{}"
+    compliance_data = json.loads(compliance_raw) if compliance_raw else {}
     return GlassResponse(
         id=row["id"],
         query=row["query"],
@@ -106,6 +104,7 @@ def _row_to_response(row: sqlite3.Row) -> GlassResponse:
         provenance_seal=seal,
         backend=row["backend"],
         timestamp=row["timestamp"],
+        compliance=ComplianceMetadata(**compliance_data) if compliance_data else ComplianceMetadata(),
     )
 
 
@@ -143,4 +142,72 @@ def list_memory(db_path: str) -> list[MemoryEntry]:
 def delete_memory(db_path: str, memory_id: str) -> bool:
     with get_conn(db_path) as conn:
         cursor = conn.execute("DELETE FROM memory WHERE id = ?", (memory_id,))
+        return cursor.rowcount > 0
+
+
+def population_report(db_path: str, start: str | None = None, end: str | None = None) -> list[dict]:
+    """Return a summary of all responses for auditor population sampling.
+
+    Each entry contains timestamp, query_hash (SHA-256 of query text),
+    seal_status, backend, and claim status counts.
+    """
+    import hashlib
+    from glass.audit import verify_seal
+
+    with get_conn(db_path) as conn:
+        if start and end:
+            rows = conn.execute(
+                "SELECT * FROM responses WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp DESC",
+                (start, end + "T23:59:59Z"),
+            ).fetchall()
+        elif start:
+            rows = conn.execute(
+                "SELECT * FROM responses WHERE timestamp >= ? ORDER BY timestamp DESC",
+                (start,),
+            ).fetchall()
+        elif end:
+            rows = conn.execute(
+                "SELECT * FROM responses WHERE timestamp <= ? ORDER BY timestamp DESC",
+                (end + "T23:59:59Z",),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM responses ORDER BY timestamp DESC",
+            ).fetchall()
+
+    results = []
+    for row in rows:
+        resp = _row_to_response(row)
+        is_valid, _msg = verify_seal(resp.audit_trail)
+        # Also check stored seal matches chain
+        if is_valid and resp.audit_trail:
+            recomputed = resp.audit_trail[-1].chain_hash
+            if resp.provenance_seal and resp.provenance_seal != recomputed:
+                is_valid = False
+
+        claims_count = len(resp.claims)
+        consistent_count = sum(1 for c in resp.claims if c.status == "consistent")
+        uncertain_count = sum(1 for c in resp.claims if c.status == "uncertain")
+        unverifiable_count = sum(1 for c in resp.claims if c.status == "unverifiable")
+
+        results.append({
+            "timestamp": resp.timestamp,
+            "query_hash": hashlib.sha256(resp.query.encode("utf-8")).hexdigest(),
+            "seal_status": "intact" if is_valid else "broken",
+            "backend": resp.backend,
+            "claims_count": claims_count,
+            "consistent_count": consistent_count,
+            "uncertain_count": uncertain_count,
+            "unverifiable_count": unverifiable_count,
+        })
+    return results
+
+
+def update_compliance(db_path: str, response_id: str, compliance: ComplianceMetadata) -> bool:
+    """Update compliance metadata on an existing response. Returns True if found."""
+    with get_conn(db_path) as conn:
+        cursor = conn.execute(
+            "UPDATE responses SET compliance = ? WHERE id = ?",
+            (json.dumps(compliance.model_dump()), response_id),
+        )
         return cursor.rowcount > 0

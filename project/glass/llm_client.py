@@ -4,6 +4,8 @@ Extracted from decomposer.py and verifier.py to eliminate ~85 lines of
 duplication. Every LLM call in the pipeline goes through this module.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import re
@@ -22,8 +24,13 @@ async def call_llm(
     settings: Settings,
     trail: AuditTrail,
     description: str,
+    http_client: httpx.AsyncClient | None = None,
+    anthropic_client=None,
 ) -> str:
     """Send a prompt to the configured LLM backend and record it in the audit trail.
+
+    Accepts optional pre-created clients for connection pooling. When provided,
+    the existing client is reused instead of creating a new TCP+TLS session per call.
 
     Raises on network/API errors — callers are responsible for handling failures
     and recording them in the audit trail if desired.
@@ -37,13 +44,19 @@ async def call_llm(
             "stream": False,
         }
         with AuditedTimer() as timer:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                resp = await client.post(
+            if http_client is not None:
+                resp = await http_client.post(
                     f"{settings.ollama_base_url}/api/generate",
                     json=payload,
                 )
-                resp.raise_for_status()
-                text = resp.json()["response"]
+            else:
+                async with httpx.AsyncClient(timeout=120.0) as client:
+                    resp = await client.post(
+                        f"{settings.ollama_base_url}/api/generate",
+                        json=payload,
+                    )
+            resp.raise_for_status()
+            text = resp.json()["response"]
         trail.record(
             operation="llm_call",
             description=f"{description} via ollama ({settings.ollama_model})",
@@ -64,8 +77,8 @@ async def call_llm(
         }
         payload_bytes = len(json.dumps(payload).encode())
         with AuditedTimer() as timer:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                resp = await client.post(
+            if http_client is not None:
+                resp = await http_client.post(
                     "https://openrouter.ai/api/v1/chat/completions",
                     headers={
                         "Authorization": f"Bearer {settings.openrouter_api_key}",
@@ -73,8 +86,18 @@ async def call_llm(
                     },
                     json=payload,
                 )
-                resp.raise_for_status()
-                text = resp.json()["choices"][0]["message"]["content"]
+            else:
+                async with httpx.AsyncClient(timeout=120.0) as client:
+                    resp = await client.post(
+                        "https://openrouter.ai/api/v1/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {settings.openrouter_api_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json=payload,
+                    )
+            resp.raise_for_status()
+            text = resp.json()["choices"][0]["message"]["content"]
         trail.record(
             operation="llm_call",
             description=f"{description} via openrouter ({settings.openrouter_model})",
@@ -90,7 +113,7 @@ async def call_llm(
     elif backend == "claude":
         import anthropic
 
-        client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        client = anthropic_client or anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
         with AuditedTimer() as timer:
             message = await client.messages.create(
                 model=settings.claude_model,

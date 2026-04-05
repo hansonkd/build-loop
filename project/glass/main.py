@@ -4,7 +4,8 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException
+import httpx
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
@@ -17,12 +18,14 @@ from glass.db import (
     init_db,
     list_memory,
     list_responses,
+    population_report,
     save_response,
+    update_compliance,
 )
 from glass.decomposer import check_premises, decompose_claims
 from glass.generator import detect_backend, generate
 from glass.logging_config import RequestLoggingMiddleware, configure_logging
-from glass.models import AuditEvent, GlassResponse, QueryRequest, StatusResponse
+from glass.models import AuditEvent, ComplianceMetadata, GlassResponse, QueryRequest, StatusResponse
 from glass.pdf_export import generate_proof_pdf
 from glass.verifier import verify_claims
 
@@ -42,7 +45,8 @@ async def _get_backend() -> str | None:
     """Return cached backend, detecting on first call."""
     global _cached_backend, _backend_detected
     if not _backend_detected:
-        _cached_backend = await detect_backend(settings)
+        http_client = getattr(app.state, "http_client", None)
+        _cached_backend = await detect_backend(settings, http_client=http_client)
         _backend_detected = True
     return _cached_backend
 
@@ -50,7 +54,8 @@ async def _get_backend() -> str | None:
 async def _refresh_backend() -> str | None:
     """Force re-detection of backend (e.g., if Ollama was started after Glass)."""
     global _cached_backend, _backend_detected
-    _cached_backend = await detect_backend(settings)
+    http_client = getattr(app.state, "http_client", None)
+    _cached_backend = await detect_backend(settings, http_client=http_client)
     _backend_detected = True
     return _cached_backend
 
@@ -58,10 +63,28 @@ async def _refresh_backend() -> str | None:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     init_db(settings.db_path)
+
+    # Create lifespan-scoped httpx client for connection pooling.
+    # Eliminates per-call TCP+TLS handshakes — 4 LLM calls per query benefit significantly.
+    app.state.http_client = httpx.AsyncClient(timeout=120.0)
+
+    # Create singleton Anthropic client if API key is configured
+    app.state.anthropic_client = None
+    if settings.anthropic_api_key:
+        try:
+            import anthropic
+            app.state.anthropic_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        except ImportError:
+            logger.warning("anthropic package not installed; Claude backend unavailable")
+
     # Detect backend once at startup instead of probing on every request
     await _get_backend()
     logger.info("Glass started — backend: %s", _cached_backend or "none")
     yield
+    # Clean up pooled clients
+    await app.state.http_client.aclose()
+    if app.state.anthropic_client is not None:
+        await app.state.anthropic_client.close()
 
 
 app = FastAPI(title="Glass", description="AI that shows its work — all of it", lifespan=lifespan)
@@ -102,11 +125,15 @@ async def query(req: QueryRequest) -> GlassResponse:
             detail="No model backend is available. Install Ollama or set ANTHROPIC_API_KEY.",
         )
 
+    # Retrieve pooled clients from app.state for connection reuse
+    http_client = getattr(app.state, "http_client", None)
+    anthropic_client = getattr(app.state, "anthropic_client", None)
+
     trail = AuditTrail()
 
     # Generate response with reasoning trace — record failure if it happens
     try:
-        raw_response, reasoning_trace = await generate(req.query, backend, settings, trail)
+        raw_response, reasoning_trace = await generate(req.query, backend, settings, trail, http_client=http_client, anthropic_client=anthropic_client)
     except Exception as exc:
         logger.error("Generation failed: %s", exc)
         trail.record(
@@ -124,13 +151,13 @@ async def query(req: QueryRequest) -> GlassResponse:
         )
 
     # Check user's premises for errors
-    premise_flags = await check_premises(req.query, backend, settings, trail)
+    premise_flags = await check_premises(req.query, backend, settings, trail, http_client=http_client, anthropic_client=anthropic_client)
 
     # Decompose into claims
-    claims = await decompose_claims(raw_response, backend, settings, trail)
+    claims = await decompose_claims(raw_response, backend, settings, trail, http_client=http_client, anthropic_client=anthropic_client)
 
     # Check each claim for consistency
-    claims = await verify_claims(claims, reasoning_trace, backend, settings, trail)
+    claims = await verify_claims(claims, reasoning_trace, backend, settings, trail, http_client=http_client, anthropic_client=anthropic_client)
 
     response = GlassResponse(
         id=str(uuid.uuid4()),
@@ -291,6 +318,37 @@ async def export_proof_bundle_pdf(response_id: str):
             "Content-Disposition": f'attachment; filename="glass-proof-{response_id[:8]}.pdf"',
         },
     )
+
+
+@app.get("/api/population")
+async def get_population_report(
+    start: str | None = Query(None, description="Start date YYYY-MM-DD"),
+    end: str | None = Query(None, description="End date YYYY-MM-DD"),
+):
+    """Population report for auditor period sampling.
+
+    Returns a summary of all responses in the date range including query hash
+    (SHA-256 of query text for privacy), seal verification status, backend used,
+    and claim status counts.
+    """
+    return population_report(settings.db_path, start=start, end=end)
+
+
+@app.patch("/api/response/{response_id}/compliance")
+async def patch_compliance(response_id: str, body: ComplianceMetadata):
+    """Update compliance metadata on a stored response.
+
+    Fields: control_refs, retention_class, retention_period_years,
+    legal_hold, reviewed_by, reviewed_at.
+    """
+    resp = get_response(settings.db_path, response_id)
+    if resp is None:
+        raise HTTPException(status_code=404, detail="Response not found")
+
+    if not update_compliance(settings.db_path, response_id, body):
+        raise HTTPException(status_code=500, detail="Failed to update compliance metadata")
+
+    return {"status": "updated", "response_id": response_id, "compliance": body.model_dump()}
 
 
 # --- Health probes (liveness + readiness split for k8s) ---

@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 import json
 import logging
+
+import httpx
 
 from glass.audit import AuditTrail
 from glass.config import Settings
@@ -38,10 +42,10 @@ Query:
 ---"""
 
 
-async def decompose_claims(text: str, backend: str, settings: Settings, trail: AuditTrail) -> list[Claim]:
+async def decompose_claims(text: str, backend: str, settings: Settings, trail: AuditTrail, http_client: httpx.AsyncClient | None = None, anthropic_client=None) -> list[Claim]:
     prompt = DECOMPOSE_PROMPT.format(text=text)
     try:
-        raw = await call_llm(prompt, backend, settings, trail, "Decompose response into claims")
+        raw = await call_llm(prompt, backend, settings, trail, "Decompose response into claims", http_client=http_client, anthropic_client=anthropic_client)
     except Exception as exc:
         logger.error("LLM call failed during decomposition: %s", exc)
         trail.record(
@@ -57,10 +61,10 @@ async def decompose_claims(text: str, backend: str, settings: Settings, trail: A
     return _parse_claims(raw, text)
 
 
-async def check_premises(query: str, backend: str, settings: Settings, trail: AuditTrail) -> list[str]:
+async def check_premises(query: str, backend: str, settings: Settings, trail: AuditTrail, http_client: httpx.AsyncClient | None = None, anthropic_client=None) -> list[str]:
     prompt = PREMISE_CHECK_PROMPT.format(query=query)
     try:
-        raw = await call_llm(prompt, backend, settings, trail, "Check query premises for errors")
+        raw = await call_llm(prompt, backend, settings, trail, "Check query premises for errors", http_client=http_client, anthropic_client=anthropic_client)
     except Exception as exc:
         logger.error("LLM call failed during premise check: %s", exc)
         trail.record(

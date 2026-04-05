@@ -2,11 +2,8 @@
 reference-docs/
 project/
 landing-page/
-.claude/pace-metrics.json
-.claude/pace.json
-.claude/loop-log.md
-.claude/plans/
-.claude/scheduled_tasks*
+.build-loop/
+.claude/
 
 # Build artifacts
 node_modules/

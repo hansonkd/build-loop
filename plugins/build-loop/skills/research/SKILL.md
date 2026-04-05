@@ -15,7 +15,7 @@ Launch 1-2 sonnet subagents to pull signals from available sources. Synthesize i
 Per-session state is at `reference-docs/sessions/${CLAUDE_SESSION_ID}/`. Read this session's goal from there. Write feedback there. Also scan other sessions' feedback for cross-pollination.
 
 ## Before starting: Check pace
-Read `.claude/sessions/${CLAUDE_SESSION_ID}/pace-metrics.json` if it exists. If PAUSE or SLOW, skip — research is deferrable. If CONSERVE, read fewer sources (3-5 instead of 5-10).
+Read `.build-loop/sessions/${CLAUDE_SESSION_ID}/pace-metrics.json` if it exists. If PAUSE or SLOW, skip — research is deferrable. If CONSERVE, read fewer sources (3-5 instead of 5-10).
 
 ## Sources to check (use the 3-agent pattern)
 Launch up to 3 sonnet subagents in parallel, each scanning a different source type. This prevents tunnel vision and costs ~2 min wall time:

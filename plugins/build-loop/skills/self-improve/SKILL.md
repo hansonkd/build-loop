@@ -18,8 +18,8 @@ Multiple sessions can run in the same project with different goals. Per-session 
 - `reference-docs/sessions/${CLAUDE_SESSION_ID}/goal.md`
 - `reference-docs/sessions/${CLAUDE_SESSION_ID}/evaluation.md`
 - `reference-docs/sessions/${CLAUDE_SESSION_ID}/feedback-*.md`
-- `.claude/sessions/${CLAUDE_SESSION_ID}/loop-log.md`
-- `.claude/sessions/${CLAUDE_SESSION_ID}/pace-metrics.json`
+- `.build-loop/sessions/${CLAUDE_SESSION_ID}/loop-log.md`
+- `.build-loop/sessions/${CLAUDE_SESSION_ID}/pace-metrics.json`
 
 **Shared (all sessions read/write, coordinated via git):**
 - `reference-docs/*.md` (specs — vision, architecture, principles, etc.)
@@ -36,7 +36,7 @@ Create the session directory: `reference-docs/sessions/${CLAUDE_SESSION_ID}/`
 
 Write `reference-docs/sessions/${CLAUDE_SESSION_ID}/goal.md` (see /refine-goal for format).
 Write `reference-docs/sessions/${CLAUDE_SESSION_ID}/evaluation.md` (see /refine-evaluation for format).
-Initialize `.claude/sessions/${CLAUDE_SESSION_ID}/loop-log.md` with cycle 0.
+Initialize `.build-loop/sessions/${CLAUDE_SESSION_ID}/loop-log.md` with cycle 0.
 
 If no goal file exists for this session and no args: say "Run `/refine-goal` first" and stop.
 
@@ -55,13 +55,13 @@ Parse `session.utilization` (5h) and `weekly.utilization` (7d). Read budget from
 - If weekly utilization > 0.85 with > 2 days remaining: **SLOW** for the week.
 - Otherwise: **NORMAL**.
 
-Append one line to `.claude/sessions/${CLAUDE_SESSION_ID}/pace-metrics.json`.
+Append one line to `.build-loop/sessions/${CLAUDE_SESSION_ID}/pace-metrics.json`.
 
 **Infer other sessions:** If total utilization is rising faster than this session's contribution, other sessions exist. Adjust: `effective_budget = budget / max(1, inferred_sessions)`. Be conservative — slow down rather than starve others.
 
 ### 2. Read state (~5 seconds)
 
-- Read this session's `.claude/sessions/${CLAUDE_SESSION_ID}/loop-log.md` — what did last cycle do? What's in the backlog?
+- Read this session's `.build-loop/sessions/${CLAUDE_SESSION_ID}/loop-log.md` — what did last cycle do? What's in the backlog?
 - Read this session's `reference-docs/sessions/${CLAUDE_SESSION_ID}/feedback-*.md` — any feedback?
 - Also scan other sessions' feedback files (`reference-docs/sessions/*/feedback-*.md`) for signals this session should know about
 - `git log --oneline -5` — recent work (from any session)
@@ -106,7 +106,7 @@ After any BUILD or FIX action completes:
 
 ### 6. Log (the handoff contract)
 
-Append to `.claude/sessions/${CLAUDE_SESSION_ID}/loop-log.md`:
+Append to `.build-loop/sessions/${CLAUDE_SESSION_ID}/loop-log.md`:
 
 ```markdown
 ## YYYY-MM-DD HH:MM — Cycle N — ACTION
@@ -126,7 +126,7 @@ Tests: [pass count or "no tests"]
 **Three sources of truth — don't duplicate between them:**
 - `reference-docs/` (shared specs + per-session goal) = what the project SHOULD be (intent)
 - The code = what the project IS right now (state)
-- `.claude/sessions/${CLAUDE_SESSION_ID}/loop-log.md` = why things changed (decisions)
+- `.build-loop/sessions/${CLAUDE_SESSION_ID}/loop-log.md` = why things changed (decisions)
 
 The log should never list features or restate the spec. It records actions, reasoning, and the backlog. After 50 entries, summarize the oldest 40 into a single "history summary" block at the top.
 

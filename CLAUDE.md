@@ -8,7 +8,7 @@ A Claude Code plugin providing autonomous product development skills. Install it
 
 ## Plugin Structure
 
-- **`skills/`** — The skill files. This is the product.
+- **`plugins/build-loop/skills/`** — The skill files. This is the product.
 - **`.claude-plugin/`** — Plugin manifest and marketplace config for installation.
 - **`hooks/`** — SessionStart hook that auto-installs npm deps (`claude-rate-monitor`, `ccusage`).
 - **`package.json`** — npm dependencies for budget monitoring.
@@ -32,7 +32,7 @@ A Claude Code plugin providing autonomous product development skills. Install it
 |----------|--------|
 | What should this be? | `reference-docs/` (specs + goal) |
 | What is this right now? | The code |
-| Why did it change? | `.claude/loop-log.md` |
+| Why did it change? | `.build-loop/sessions/<id>/loop-log.md` |
 
 ## Priority Framework
 

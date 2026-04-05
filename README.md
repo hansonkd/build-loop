@@ -104,7 +104,7 @@ The loop is spec-driven. Feedback updates specs. Specs drive code. Code never dr
 |----------|--------|
 | What should this be? | `reference-docs/` (shared specs) + session's `goal.md` |
 | What is this now? | The code |
-| Why did it change? | `.claude/sessions/<id>/loop-log.md` |
+| Why did it change? | `.build-loop/sessions/<id>/loop-log.md` |
 
 ### The Goal File
 

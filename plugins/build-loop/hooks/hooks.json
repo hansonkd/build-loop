@@ -2,8 +2,12 @@
   "hooks": {
     "SessionStart": [
       {
-        "type": "command",
-        "command": "command -v npx >/dev/null && (npm ls claude-rate-monitor >/dev/null 2>&1 || npm install --no-fund --no-audit claude-rate-monitor ccusage 2>/dev/null)"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v npx >/dev/null && (npm ls claude-rate-monitor >/dev/null 2>&1 || npm install --no-fund --no-audit claude-rate-monitor ccusage 2>/dev/null)"
+          }
+        ]
       }
     ]
   }

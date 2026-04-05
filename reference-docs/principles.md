@@ -4,12 +4,13 @@ These are hard constraints. All code generation must adhere to every principle. 
 
 ## 1. Honest by Structure, Not Instruction
 
-Verification is architectural, not prompt-engineered. A separate verifier process checks claims independently of the generator. Prompting the generator to "be honest" is not a substitute for structural verification.
+Consistency checking is architectural, not prompt-engineered. A separate checker process assesses claims against the reasoning that produced them. Prompting the generator to "be honest" is not a substitute for structural checking.
 
 - Every response passes through a decomposition step that extracts individual claims
-- Each claim is independently assessed by a verifier
+- Each claim is independently assessed by a consistency checker
 - "I don't know" is a first-class output displayed prominently -- never hidden, never apologetic
-- The system never presents unverified claims as verified
+- The system never presents unchecked claims as consistent
+- Important limitation: the consistency checker uses the same type of LLM as the generator. "Consistent" means internally coherent, not factually correct. This is self-attestation, not independent verification.
 
 ## 2. Process-First Transparency
 
@@ -28,7 +29,7 @@ The system is designed to disagree when disagreement is warranted. It does not o
 - When the user's premise contains a factual error, the system flags it before answering
 - Confidence scores reflect actual verification status, not rhetorical hedging
 - The system never uses phrases like "Great question!" or "You're absolutely right!" -- it responds to content, not to the user's ego
-- If the user pushes back on a verified claim, the system holds its ground and shows evidence
+- If the user pushes back on a consistent claim, the system holds its ground and shows evidence
 
 ## 4. Local-First, User-Owned Data
 
@@ -41,14 +42,15 @@ The default mode of operation requires no internet connection and sends no data 
 - No telemetry, no analytics, no phoning home
 - The data flow panel shows exactly what bytes left the machine, where they went, and what came back -- for every operation
 
-## 5. Verifiable Over Impressive
+## 5. Consistent Over Impressive
 
-The system prioritizes narrow correctness over broad fluency. A response that says "I can verify X but not Y" is better than one that confidently covers everything.
+The system prioritizes narrow correctness over broad fluency. A response that says "I can check X but not Y" is better than one that confidently covers everything.
 
-- Claims are tagged: `verified` (evidence found), `uncertain` (plausible but unconfirmed), `unverifiable` (cannot be checked)
+- Claims are tagged: `consistent` (internally coherent with reasoning), `uncertain` (plausible but weakly supported), `unverifiable` (cannot be assessed from available information)
+- "Consistent" means the claim is self-consistent with the reasoning trace, not that it is factually verified against external sources. The same type of LLM is used for generation and consistency checking — this is self-attestation, not independent verification.
 - The system prefers shorter, more precise answers over longer, more comprehensive ones
 - When the model would need to speculate to answer fully, it answers partially and labels the gap
-- No claim is presented without a confidence tag
+- No claim is presented without a status tag
 
 ## 6. Auditable Actions
 

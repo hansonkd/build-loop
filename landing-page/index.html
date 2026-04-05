@@ -11,7 +11,7 @@
             --border: #27272a;
             --text: #fafafa;
             --text-muted: #a1a1aa;
-            --verified: #22c55e;
+            --consistent: #22c55e;
             --uncertain: #eab308;
             --unverifiable: #71717a;
             --accent: #3b82f6;
@@ -58,7 +58,7 @@
             font-size: 15px;
             color: var(--text-muted);
             margin-bottom: 40px;
-            max-width: 520px;
+            max-width: 560px;
             margin-left: auto;
             margin-right: auto;
             line-height: 1.7;
@@ -77,6 +77,36 @@
         }
 
         .cta:hover { opacity: 0.85; }
+
+        /* Self-attestation disclosure */
+        .disclosure {
+            max-width: 600px;
+            margin: 24px auto 0;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .disclosure strong {
+            color: var(--text);
+        }
+
+        /* Jargon tooltip */
+        .jargon {
+            border-bottom: 1px dotted var(--text-muted);
+            cursor: help;
+            position: relative;
+        }
+
+        .jargon-explain {
+            color: var(--text-muted);
+            font-size: 13px;
+            font-style: italic;
+        }
 
         /* Sections */
         .section {
@@ -208,7 +238,7 @@
         .demo-seal-status {
             font-size: 10px;
             font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-            color: var(--verified);
+            color: var(--consistent);
         }
 
         /* Export proof demo */
@@ -253,7 +283,7 @@
             gap: 8px;
         }
 
-        .demo-claim.verified { border-left-color: var(--verified); }
+        .demo-claim.consistent { border-left-color: var(--consistent); }
         .demo-claim.uncertain { border-left-color: var(--uncertain); }
         .demo-claim.unverifiable { border-left-color: var(--unverifiable); }
 
@@ -267,7 +297,7 @@
             flex-shrink: 0;
         }
 
-        .badge.verified { color: var(--verified); background: rgba(34, 197, 94, 0.15); }
+        .badge.consistent { color: var(--consistent); background: rgba(34, 197, 94, 0.15); }
         .badge.uncertain { color: var(--uncertain); background: rgba(234, 179, 8, 0.15); }
         .badge.unverifiable { color: var(--unverifiable); background: rgba(113, 113, 122, 0.15); }
 
@@ -354,13 +384,17 @@
         <section class="hero">
             <h1>Glass</h1>
             <p class="tagline">AI you can watch -- and prove you watched.</p>
-            <p class="subtagline">Every thought, every action, every byte -- sealed with a cryptographic chain you can verify without trusting us. Export the proof, take it anywhere. The process is the interface. The seal is the receipt. The bundle is yours.</p>
+            <p class="subtagline">Every thought, every action, every byte -- sealed with a <span class="jargon" title="A hash chain links each audit event to the previous one using SHA-256 (a standard fingerprinting algorithm). If any event is altered, the chain breaks and the tampering is detectable.">hash chain</span> you can verify without trusting us. Export the proof, take it anywhere. The process is the interface. The seal is the receipt. The bundle is yours.</p>
             <a href="http://localhost:7777" class="cta">Try the Demo</a>
+
+            <div class="disclosure">
+                <strong>What the seal proves and does not prove:</strong> The provenance seal proves the audit trail has not been modified after it was written. It does not prove the content is factually correct. Glass generates its own audit trail, so the seal is self-attestation, not independent verification. Consistency checks use the same type of model that generated the response -- "consistent" means internally coherent, not externally validated.
+            </div>
         </section>
 
         <section class="section">
             <h2>The process is the product. The proof is portable.</h2>
-            <p>Most AI tools show you a loading spinner, then an answer. You have no idea what happened in between. Glass inverts this: the left column shows every operation the AI performed -- which models were called, where your data went, how long each step took. The right column shows the result with verified claims. Every response carries a provenance seal -- a cryptographic hash chain over the audit trail that anyone can verify independently. And now, every response can be exported as a self-contained proof bundle: a JSON file you can download, email, archive, or hand to an auditor. The bundle contains everything needed to verify the seal -- no Glass required.</p>
+            <p>Most AI tools show you a loading spinner, then an answer. You have no idea what happened in between. Glass inverts this: the left column shows every operation the AI performed -- which models were called, where your data went, how long each step took. The right column shows the result with claims checked for consistency. Every response carries a <span class="jargon" title="A provenance seal is the final fingerprint in a chain of linked fingerprints covering the entire audit trail. It proves nothing was altered after the fact.">provenance seal</span> -- a <span class="jargon" title="SHA-256 is a widely-used fingerprinting algorithm. It produces a unique 64-character string from any input. Even a tiny change in the input produces a completely different fingerprint.">SHA-256</span> <span class="jargon" title="A hash chain links each record to the previous one. If any record is changed, every link after it breaks. Think of it like a wax seal on each page of a notarized document.">hash chain</span> over the audit trail that anyone can verify independently. And now, every response can be exported as a self-contained proof bundle: a JSON file you can download, email, archive, or hand to an auditor. The bundle contains everything needed to verify the seal -- no Glass required.</p>
 
             <div class="process-demo">
                 <div class="process-side">
@@ -384,7 +418,7 @@
                     <div class="demo-event">
                         <span class="demo-dot local"></span>
                         <div>
-                            <div class="demo-event-text">Verify claims via ollama (llama3.2)</div>
+                            <div class="demo-event-text">Check claim consistency via ollama (llama3.2)</div>
                             <div class="demo-event-meta">920ms -- local/ollama</div>
                             <div class="demo-event-flow"><span class="up">&uarr; 4.2 KB</span> <span class="down">&darr; 1.1 KB</span></div>
                         </div>
@@ -399,7 +433,7 @@
                     <div class="demo-seal">
                         <div class="demo-seal-label">Provenance Seal</div>
                         <code class="demo-seal-hash">a3f8c1d9e7b24f06...</code>
-                        <span class="demo-seal-status">Chain intact -- 4 events verified</span>
+                        <span class="demo-seal-status">Chain intact -- 4 events checked</span>
                     </div>
                     <div class="demo-export">
                         <span class="demo-export-btn">Export Proof Bundle</span>
@@ -410,8 +444,8 @@
                     <div class="col-label">Result -- what Glass found</div>
                     <div class="demo-answer">Python 3.12 introduced several performance improvements, including specialization of comprehensions and a new perf profiler integration...</div>
                     <div class="demo-claims">
-                        <div class="demo-claim verified">
-                            <span class="badge verified">Verified</span>
+                        <div class="demo-claim consistent">
+                            <span class="badge consistent">Consistent</span>
                             <span class="claim-text">Python 3.12 was released on October 2, 2023.</span>
                         </div>
                         <div class="demo-claim uncertain">
@@ -425,6 +459,7 @@
                     </div>
                 </div>
             </div>
+            <p class="jargon-explain">"Consistent" means the claim is internally coherent with the reasoning that produced it. It does not mean factually correct -- Glass checks self-consistency, not external truth. "Uncertain" and "Unverifiable" are honest admissions of the model's limits.</p>
         </section>
 
         <section class="section">
@@ -436,7 +471,7 @@
                 <li><strong>AI hides its own identity.</strong> Anthropic's leaked Claude Code source revealed "undercover mode" -- AI instructed to hide that it authored code in public repos. Then Anthropic DMCAs its own forks. If the companies building AI won't be transparent, the tool must enforce transparency architecturally.</li>
                 <li><strong>Nobody is accountable.</strong> Courts publish AI-hallucinated citations. Police arrest innocent people on AI facial recognition. The pattern is always the same: AI makes a confident decision, a human rubber-stamps it, someone gets hurt. Glass makes the AI's process visible enough that you can actually verify before acting.</li>
                 <li><strong>Local-first has won.</strong> Gemma 4 runs on a Raspberry Pi. 397B models run on a MacBook. 1-bit models run at 132 tok/s on an iPhone. The question is no longer "can I run AI locally?" -- it is "why am I still sending my data to a company I don't trust?"</li>
-                <li><strong>Visibility is not enough -- you need portable proof.</strong> Showing your process is good. Sealing it cryptographically is better. But when the LiteLLM compromise hits and you need to prove what your AI actually did during those 40 minutes, you need proof you can take somewhere else. Glass proof bundles are self-contained JSON files: download them, email them, archive them, hand them to a compliance auditor. Verify offline with nothing but SHA-256.</li>
+                <li><strong>Visibility is not enough -- you need portable proof.</strong> Showing your process is good. Sealing it cryptographically is better. But when the LiteLLM compromise hits and you need to prove what your AI actually did during those 40 minutes, you need proof you can take somewhere else. Glass proof bundles are self-contained JSON files: download them, email them, archive them, hand them to a compliance auditor. Verify offline with nothing but <span class="jargon" title="SHA-256 is a standard fingerprinting algorithm available in every programming language. It produces a fixed-length string from any input -- even a single changed character produces a completely different output.">SHA-256</span>.</li>
             </ul>
         </section>
 
@@ -445,7 +480,7 @@
             <div class="principles">
                 <div class="principle">
                     <h3>Honest by structure</h3>
-                    <p>Verification is architectural, not prompt-engineered. A separate verifier checks every claim.</p>
+                    <p>Consistency checking is architectural, not prompt-engineered. A separate checker assesses every claim against the reasoning that produced it.</p>
                 </div>
                 <div class="principle">
                     <h3>Process-first</h3>
@@ -460,8 +495,8 @@
                     <p>Runs on your hardware via Ollama. Cloud is opt-in with visible data flow indicators.</p>
                 </div>
                 <div class="principle">
-                    <h3>Verifiable over impressive</h3>
-                    <p>"I can verify X but not Y" beats a confident-sounding complete answer.</p>
+                    <h3>Consistent over impressive</h3>
+                    <p>"I can check X but not Y" beats a confident-sounding complete answer.</p>
                 </div>
                 <div class="principle">
                     <h3>Auditable actions</h3>
@@ -469,7 +504,7 @@
                 </div>
                 <div class="principle">
                     <h3>Provenance seals</h3>
-                    <p>Every response carries a cryptographic hash chain. Verify the seal without trusting Glass.</p>
+                    <p>Every response carries a hash chain <span class="jargon-explain">(a sequence of linked fingerprints)</span>. Check the seal without trusting Glass.</p>
                 </div>
                 <div class="principle">
                     <h3>Portable proof</h3>
@@ -483,11 +518,11 @@
             <p>Glass runs your query through a six-stage pipeline. Every stage is visible in the process column as it happens:</p>
             <p><strong>Generate</strong> -- An LLM produces a response with explicit step-by-step reasoning.<br>
             <strong>Decompose</strong> -- The response is broken into atomic, checkable claims.<br>
-            <strong>Verify</strong> -- Each claim is independently assessed for consistency and evidentiary support.<br>
+            <strong>Check</strong> -- Each claim is independently assessed for self-consistency and reasoning support. (This is an internal coherence check, not a fact-check against external sources.)<br>
             <strong>Audit</strong> -- Every operation is logged: which calls were made, where data went, how long it took, how many bytes moved.<br>
-            <strong>Seal</strong> -- A cryptographic hash chain is computed over the audit trail. The seal proves the trail is unaltered. Anyone can verify it by recomputing the hashes.<br>
+            <strong>Seal</strong> -- A <span class="jargon" title="Each audit event is fingerprinted together with the previous event's fingerprint, forming a chain. If any event is modified after the fact, the chain breaks.">hash chain</span> is computed over the audit trail. The seal proves the trail was not altered after writing. Anyone can verify by recomputing the hashes.<br>
             <strong>Export</strong> -- One click downloads a self-contained proof bundle: a JSON file with the complete audit trail, seal, claims, and verification instructions. Take it anywhere.</p>
-            <p>The result is presented in a two-column layout. Left: the process (audit trail + reasoning trace + provenance seal). Right: the result (answer + verified claims). You see both simultaneously. The process is not hidden -- it is the primary evidence that Glass is doing what it claims. The seal is the proof that the evidence has not been tampered with. The proof bundle makes it portable.</p>
+            <p>The result is presented in a two-column layout. Left: the process (audit trail + reasoning trace + provenance seal). Right: the result (answer + consistency-checked claims). You see both simultaneously. The process is not hidden -- it is the primary evidence that Glass is doing what it claims. The seal is the proof that the evidence has not been tampered with. The proof bundle makes it portable.</p>
         </section>
 
         <footer>

@@ -5,7 +5,8 @@
     --border: #30363d;
     --text: #e6edf3;
     --text-muted: #8b949e;
-    --verified: #3fb950;
+    --consistent: #3fb950;
+    --verified: #3fb950; /* legacy alias */
     --uncertain: #d29922;
     --unverifiable: #8b949e;
     --error: #f85149;
@@ -75,7 +76,7 @@ header h1 {
     white-space: nowrap;
 }
 
-#status-badge.online { border-color: var(--verified); color: var(--verified); }
+#status-badge.online { border-color: var(--consistent); color: var(--consistent); }
 #status-badge.offline { border-color: var(--error); color: var(--error); }
 
 /* Main */
@@ -172,8 +173,8 @@ main {
 }
 
 .pipeline-stage.done {
-    border-color: var(--verified);
-    color: var(--verified);
+    border-color: var(--consistent);
+    color: var(--consistent);
 }
 
 .pipeline-stage .stage-dot {
@@ -190,7 +191,7 @@ main {
 }
 
 .pipeline-stage.done .stage-dot {
-    background: var(--verified);
+    background: var(--consistent);
 }
 
 @keyframes pulse-dot {
@@ -280,7 +281,8 @@ main {
     display: inline-block;
 }
 
-.dot.verified { background: var(--verified); }
+.dot.consistent { background: var(--consistent); }
+.dot.verified { background: var(--verified); } /* legacy */
 .dot.uncertain { background: var(--uncertain); }
 .dot.unverifiable { background: var(--unverifiable); }
 
@@ -347,6 +349,12 @@ main {
     cursor: not-allowed;
 }
 
+.seal-verify-btn.intact {
+    border-color: var(--consistent);
+    color: var(--consistent);
+    cursor: default;
+}
+
 .seal-verify-btn.verified {
     border-color: var(--verified);
     color: var(--verified);
@@ -385,13 +393,17 @@ main {
 }
 
 .bundle-export-btn.exported {
-    border-color: var(--verified);
-    color: var(--verified);
+    border-color: var(--consistent);
+    color: var(--consistent);
 }
 
 .seal-status {
     font-size: 11px;
     font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.seal-status.intact {
+    color: var(--consistent);
 }
 
 .seal-status.verified {
@@ -400,6 +412,17 @@ main {
 
 .seal-status.broken {
     color: var(--error);
+}
+
+/* Self-attestation disclosure */
+.self-attestation-notice {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-muted);
+    background: rgba(139, 148, 158, 0.05);
+    line-height: 1.5;
+    font-style: italic;
 }
 
 /* Premise flags */
@@ -504,6 +527,12 @@ main {
 
 .audit-event .audit-dot.local { background: var(--audit-local); }
 .audit-event .audit-dot.external { background: var(--audit-external); }
+.audit-event .audit-dot.error { background: var(--error); }
+
+.audit-event.failed {
+    background: rgba(248, 81, 73, 0.08);
+    border-left: 2px solid var(--error);
+}
 
 .audit-event .audit-info {
     flex: 1;
@@ -542,7 +571,7 @@ main {
 }
 
 .data-flow-arrow.outbound { color: var(--audit-external); }
-.data-flow-arrow.inbound { color: var(--verified); }
+.data-flow-arrow.inbound { color: var(--consistent); }
 
 .chain-link {
     color: var(--accent);
@@ -659,7 +688,8 @@ main {
 }
 
 .claim:hover { background: rgba(255, 255, 255, 0.05); }
-.claim.verified { border-left-color: var(--verified); }
+.claim.consistent { border-left-color: var(--consistent); }
+.claim.verified { border-left-color: var(--verified); } /* legacy */
 .claim.uncertain { border-left-color: var(--uncertain); }
 .claim.unverifiable { border-left-color: var(--unverifiable); }
 
@@ -680,7 +710,8 @@ main {
     flex-shrink: 0;
 }
 
-.claim-status.verified { color: var(--verified); background: rgba(63, 185, 80, 0.15); }
+.claim-status.consistent { color: var(--consistent); background: rgba(63, 185, 80, 0.15); }
+.claim-status.verified { color: var(--verified); background: rgba(63, 185, 80, 0.15); } /* legacy */
 .claim-status.uncertain { color: var(--uncertain); background: rgba(210, 153, 34, 0.15); }
 .claim-status.unverifiable { color: var(--unverifiable); background: rgba(139, 148, 158, 0.15); }
 

@@ -1,9 +1,11 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 
 class Claim(BaseModel):
     text: str
-    status: str  # "verified" | "uncertain" | "unverifiable"
+    status: Literal["consistent", "uncertain", "unverifiable"]
     evidence: str
     source_span: list[int]  # [start, end] character offsets
 

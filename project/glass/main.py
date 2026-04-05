@@ -1,3 +1,4 @@
+import logging
 import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -23,12 +24,38 @@ from glass.generator import detect_backend, generate
 from glass.models import AuditEvent, GlassResponse, QueryRequest, StatusResponse
 from glass.verifier import verify_claims
 
+logger = logging.getLogger(__name__)
+
 settings = Settings.from_env()
+
+# Cached backend — detected once at startup, refreshed via /api/status if needed
+_cached_backend: str | None = None
+_backend_detected: bool = False
+
+
+async def _get_backend() -> str | None:
+    """Return cached backend, detecting on first call."""
+    global _cached_backend, _backend_detected
+    if not _backend_detected:
+        _cached_backend = await detect_backend(settings)
+        _backend_detected = True
+    return _cached_backend
+
+
+async def _refresh_backend() -> str | None:
+    """Force re-detection of backend (e.g., if Ollama was started after Glass)."""
+    global _cached_backend, _backend_detected
+    _cached_backend = await detect_backend(settings)
+    _backend_detected = True
+    return _cached_backend
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     init_db(settings.db_path)
+    # Detect backend once at startup instead of probing on every request
+    await _get_backend()
+    logger.info("Glass started — backend: %s", _cached_backend or "none")
     yield
 
 
@@ -45,7 +72,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/api/status")
 async def status() -> StatusResponse:
-    backend = await detect_backend(settings)
+    # Refresh on status check so users can start Ollama and see it picked up
+    backend = await _refresh_backend()
     if backend is None:
         return StatusResponse(
             backend=None,
@@ -59,7 +87,7 @@ async def status() -> StatusResponse:
 
 @app.post("/api/query")
 async def query(req: QueryRequest) -> GlassResponse:
-    backend = await detect_backend(settings)
+    backend = await _get_backend()
     if backend is None:
         raise HTTPException(
             status_code=503,
@@ -68,8 +96,24 @@ async def query(req: QueryRequest) -> GlassResponse:
 
     trail = AuditTrail()
 
-    # Generate response with reasoning trace
-    raw_response, reasoning_trace = await generate(req.query, backend, settings, trail)
+    # Generate response with reasoning trace — record failure if it happens
+    try:
+        raw_response, reasoning_trace = await generate(req.query, backend, settings, trail)
+    except Exception as exc:
+        logger.error("Generation failed: %s", exc)
+        trail.record(
+            operation="llm_call",
+            description=f"Generate response — FAILED: {type(exc).__name__}: {exc}",
+            backend=backend,
+            latency_ms=0,
+            bytes_sent=len(req.query.encode()),
+            bytes_received=0,
+            destination="error",
+        )
+        raise HTTPException(
+            status_code=502,
+            detail=f"LLM generation failed: {exc}",
+        )
 
     # Check user's premises for errors
     premise_flags = await check_premises(req.query, backend, settings, trail)
@@ -77,7 +121,7 @@ async def query(req: QueryRequest) -> GlassResponse:
     # Decompose into claims
     claims = await decompose_claims(raw_response, backend, settings, trail)
 
-    # Verify each claim
+    # Check each claim for consistency
     claims = await verify_claims(claims, reasoning_trace, backend, settings, trail)
 
     response = GlassResponse(
@@ -140,7 +184,7 @@ async def get_response_audit(response_id: str):
 
 @app.get("/api/response/{response_id}/verify")
 async def verify_response_provenance(response_id: str):
-    """Recompute the provenance chain and verify the seal is intact.
+    """Recompute the provenance chain and check that the seal is intact.
 
     This is a pure local computation — no trust in Glass required.
     Anyone can independently verify by recomputing the SHA-256 chain.
@@ -156,12 +200,12 @@ async def verify_response_provenance(response_id: str):
         recomputed = resp.audit_trail[-1].chain_hash
         if resp.provenance_seal and resp.provenance_seal != recomputed:
             is_valid = False
-            message = f"Stored seal does not match recomputed chain. Stored: {resp.provenance_seal[:16]}..., Computed: {recomputed[:16]}..."
+            message = f"Stored seal does not match recomputed chain. Stored: {resp.provenance_seal[:32]}..., Computed: {recomputed[:32]}..."
 
     return {
         "response_id": response_id,
         "seal": resp.provenance_seal,
-        "verified": is_valid,
+        "chain_intact": is_valid,
         "message": message,
         "events_checked": len(resp.audit_trail),
     }
@@ -190,7 +234,7 @@ async def export_proof_bundle(response_id: str):
             message = f"Stored seal does not match recomputed chain"
 
     bundle["seal_status"] = {
-        "verified": is_valid,
+        "chain_intact": is_valid,
         "message": message,
         "events_checked": len(resp.audit_trail),
     }

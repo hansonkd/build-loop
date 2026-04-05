@@ -97,13 +97,26 @@ def verify_seal(events: list[AuditEvent]) -> tuple[bool, str]:
             return False, f"Chain broken at event {i}: '{event.description}'. Expected {expected[:16]}..., got {event.chain_hash[:16]}..."
         prev_hash = event.chain_hash
 
-    return True, f"Seal verified: {len(events)} events, chain intact"
+    return True, f"Seal intact: {len(events)} events, chain consistent"
 
 
 def content_hash(text: str) -> str:
-    """Return a truncated SHA-256 hash of text content for audit purposes."""
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+    """Return the full SHA-256 hash of text content for audit purposes.
 
+    Previously truncated to 16 hex chars (64-bit), which is in birthday-attack
+    territory. Now returns the full 64 hex chars (256-bit) for proper collision
+    resistance.
+    """
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+SELF_ATTESTATION_DISCLOSURE = (
+    "This seal proves the audit trail has not been modified after it was written. "
+    "It does NOT prove the trail was accurate when written. Glass generates its own "
+    "audit trail — the seal is self-attestation, not independent verification. "
+    "The consistency checks use the same type of LLM that generated the response, "
+    "so 'consistent' means internally coherent, not factually correct."
+)
 
 VERIFICATION_INSTRUCTIONS = """To verify this proof bundle independently:
 
@@ -117,9 +130,12 @@ VERIFICATION_INSTRUCTIONS = """To verify this proof bundle independently:
 3. After processing all events, the last event's chain_hash should equal the provenance_seal field.
 4. If all checks pass, the audit trail is intact and has not been tampered with.
 
+IMPORTANT — what this proves and does not prove:
+""" + SELF_ATTESTATION_DISCLOSURE + """
+
 This verification requires only SHA-256 (available in any programming language) and no trust in Glass."""
 
-GLASS_VERSION = "0.4.0"
+GLASS_VERSION = "0.5.0"
 
 
 def build_proof_bundle(response) -> dict:
@@ -132,9 +148,10 @@ def build_proof_bundle(response) -> dict:
     from datetime import datetime, timezone
 
     return {
-        "proof_bundle_version": "1.0",
+        "proof_bundle_version": "1.1",
         "glass_version": GLASS_VERSION,
         "bundle_generated_at": datetime.now(timezone.utc).isoformat(),
+        "self_attestation_disclosure": SELF_ATTESTATION_DISCLOSURE,
         "verification_instructions": VERIFICATION_INSTRUCTIONS.strip(),
         "response": {
             "id": response.id,

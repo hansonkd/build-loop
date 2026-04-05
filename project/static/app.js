@@ -73,16 +73,18 @@ function renderAuditTimeline(auditTrail) {
         const local = isLocalDest(event.destination);
         const dotClass = local ? 'local' : 'external';
         const chainTag = event.chain_hash ? event.chain_hash.substring(0, 12) : '';
+        const isFailed = event.destination === 'error';
+        const failedClass = isFailed ? ' failed' : '';
 
         return `
-            <div class="audit-event">
-                <span class="audit-dot ${dotClass}"></span>
+            <div class="audit-event${failedClass}">
+                <span class="audit-dot ${isFailed ? 'error' : dotClass}"></span>
                 <div class="audit-info">
                     <div class="audit-desc">${esc(event.description)}</div>
                     <div class="audit-meta">
                         <span>${formatMs(event.latency_ms)}</span>
                         <span>${esc(event.destination)}</span>
-                        <span>#${esc(event.content_hash)}</span>
+                        <span>#${esc(event.content_hash ? event.content_hash.substring(0, 16) : '')}</span>
                     </div>
                     <div class="audit-data-flow">
                         <span class="data-flow-arrow outbound">&uarr; ${formatBytes(event.bytes_sent)}</span>
@@ -130,11 +132,13 @@ async function verifySeal(responseId, btnEl) {
         const resp = await fetch(`/api/response/${responseId}/verify`);
         const result = await resp.json();
         const sealEl = document.getElementById('seal-status-' + responseId);
-        if (result.verified) {
-            sealEl.className = 'seal-status verified';
-            sealEl.textContent = 'Chain intact — ' + result.events_checked + ' events verified';
-            btnEl.textContent = 'Verified';
-            btnEl.className = 'seal-verify-btn verified';
+        // Support both old "verified" field name and new "chain_intact"
+        const isIntact = result.chain_intact !== undefined ? result.chain_intact : result.verified;
+        if (isIntact) {
+            sealEl.className = 'seal-status intact';
+            sealEl.textContent = 'Chain intact — ' + result.events_checked + ' events checked';
+            btnEl.textContent = 'Chain Intact';
+            btnEl.className = 'seal-verify-btn intact';
         } else {
             sealEl.className = 'seal-status broken';
             sealEl.textContent = 'CHAIN BROKEN — ' + result.message;
@@ -147,7 +151,10 @@ async function verifySeal(responseId, btnEl) {
 }
 
 function renderResponse(data) {
-    const verified = data.claims.filter(c => c.status === 'verified').length;
+    const consistent = data.claims.filter(c => c.status === 'consistent').length;
+    // Support legacy "verified" status from older stored responses
+    const consistentLegacy = data.claims.filter(c => c.status === 'verified').length;
+    const totalConsistent = consistent + consistentLegacy;
     const uncertain = data.claims.filter(c => c.status === 'uncertain').length;
     const unverifiable = data.claims.filter(c => c.status === 'unverifiable').length;
 
@@ -163,15 +170,21 @@ function renderResponse(data) {
            </div>`
         : '';
 
-    const claimsHtml = data.claims.map((claim) => `
-        <div class="claim ${claim.status}" onclick="this.classList.toggle('expanded')">
+    // Normalize legacy "verified" status to "consistent" for display
+    const normalizeStatus = (s) => s === 'verified' ? 'consistent' : s;
+
+    const claimsHtml = data.claims.map((claim) => {
+        const displayStatus = normalizeStatus(claim.status);
+        return `
+        <div class="claim ${displayStatus}" onclick="this.classList.toggle('expanded')">
             <div class="claim-text">
-                <span class="claim-status ${claim.status}">${claim.status}</span>
+                <span class="claim-status ${displayStatus}">${displayStatus}</span>
                 <span>${esc(claim.text)}</span>
             </div>
             <div class="claim-evidence">${esc(claim.evidence)}</div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 
     const responseId = data.id;
     const reasoningId = 'reason-' + responseId;
@@ -182,7 +195,7 @@ function renderResponse(data) {
             <div class="response-header">
                 <div class="response-header-left">
                     <div class="verification-summary">
-                        <span class="count"><span class="dot verified"></span> ${verified} verified</span>
+                        <span class="count"><span class="dot consistent"></span> ${totalConsistent} consistent</span>
                         <span class="count"><span class="dot uncertain"></span> ${uncertain} uncertain</span>
                         <span class="count"><span class="dot unverifiable"></span> ${unverifiable} unverifiable</span>
                     </div>
@@ -202,9 +215,12 @@ function renderResponse(data) {
                     <span class="seal-status" id="seal-status-${responseId}"></span>
                 </div>
                 <div class="provenance-actions">
-                    <button class="seal-verify-btn" onclick="verifySeal('${responseId}', this)">Verify Chain</button>
+                    <button class="seal-verify-btn" onclick="verifySeal('${responseId}', this)">Check Chain</button>
                     <button class="bundle-export-btn" onclick="exportBundle('${responseId}', this)">Export Proof</button>
                 </div>
+            </div>
+            <div class="self-attestation-notice">
+                This seal proves the audit trail was not modified after writing. It does not prove the content is factually correct — consistency checks use the same type of model that generated the response.
             </div>
             ${premiseHtml}
             <div class="response-columns">

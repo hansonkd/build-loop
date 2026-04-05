@@ -10,7 +10,7 @@ pip install -e .
 glass
 ```
 
-Open http://localhost:5000
+Open http://localhost:7777
 
 ## Backends
 
@@ -27,4 +27,4 @@ Open http://localhost:5000
 | `ANTHROPIC_API_KEY` | (none) | Enables Claude backend |
 | `CLAUDE_MODEL` | `claude-sonnet-4-20250514` | Claude model to use |
 | `GLASS_DB_PATH` | `glass.db` | SQLite database path |
-| `GLASS_PORT` | `5000` | Server port |
+| `GLASS_PORT` | `7777` | Server port |

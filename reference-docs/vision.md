@@ -47,7 +47,7 @@ Glass answers this with **Exportable Proof Bundles**: a self-contained JSON docu
 This is not a feature. It is the architectural answer to a world where:
 - Supply chains are poisoned and you need to prove what your AI actually did during the compromise window
 - AI hides its own identity and you need proof of what process produced a given output
-- Courts publish AI-hallucinated citations and you need to demonstrate that your AI's claims were independently verified
+- Courts publish AI-hallucinated citations and you need to demonstrate that your AI's claims were checked for internal consistency and the process was auditable
 - Agents lie about their own success and you need ground truth you can hand to an auditor
 
 The proof bundle transforms Glass from "AI you can watch" into **"AI that gives you a receipt anyone can check."** The seal proves the trail is unaltered. The bundle makes the seal portable. Together, they mean that trust in Glass is never required -- only verification.

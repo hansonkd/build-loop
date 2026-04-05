@@ -7,6 +7,5 @@
   },
   "repository": "https://github.com/hansonkd/build-loop",
   "keywords": ["autonomous", "product-development", "self-improving", "loop", "spec-driven"],
-  "skills": "./skills/",
-  "hooks": "./hooks/hooks.json"
+  "skills": "./skills/"
 }

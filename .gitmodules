@@ -1,0 +1,3 @@
+[submodule "hackernews-ai-digest"]
+	path = hackernews-ai-digest
+	url = https://github.com/Planeshifter/hackernews-ai-digest.git

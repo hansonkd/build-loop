@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glass — AI you can watch</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="cloud-banner">
+        <span class="cloud-icon">&#9888;</span>
+        Cloud mode — your data is being sent to <span id="cloud-dest">an external API</span>
+    </div>
+
+    <header>
+        <div class="header-left">
+            <h1>Glass</h1>
+            <span class="header-tagline">AI you can watch. Every thought, every action, every byte.</span>
+        </div>
+        <span id="status-badge">checking...</span>
+    </header>
+
+    <main>
+        <div id="no-backend">
+            <h2>No Backend Available</h2>
+            <p>Install <a href="https://ollama.com" style="color: var(--accent)">Ollama</a> for local inference, or set the <code>ANTHROPIC_API_KEY</code> environment variable.</p>
+        </div>
+
+        <form id="query-form">
+            <input type="text" id="query-input" placeholder="Ask something — then watch how Glass answers..." autocomplete="off">
+            <button type="submit" id="submit-btn">Ask</button>
+        </form>
+
+        <div id="loading">
+            <div class="pipeline-progress">
+                <div class="pipeline-stage" id="stage-generate">
+                    <span class="stage-dot"></span>
+                    <span class="stage-label">Generate</span>
+                    <span class="stage-time"></span>
+                </div>
+                <div class="pipeline-connector"></div>
+                <div class="pipeline-stage" id="stage-decompose">
+                    <span class="stage-dot"></span>
+                    <span class="stage-label">Decompose</span>
+                    <span class="stage-time"></span>
+                </div>
+                <div class="pipeline-connector"></div>
+                <div class="pipeline-stage" id="stage-verify">
+                    <span class="stage-dot"></span>
+                    <span class="stage-label">Verify</span>
+                    <span class="stage-time"></span>
+                </div>
+                <div class="pipeline-connector"></div>
+                <div class="pipeline-stage" id="stage-audit">
+                    <span class="stage-dot"></span>
+                    <span class="stage-label">Audit</span>
+                    <span class="stage-time"></span>
+                </div>
+                <div class="pipeline-connector"></div>
+                <div class="pipeline-stage" id="stage-seal">
+                    <span class="stage-dot"></span>
+                    <span class="stage-label">Seal</span>
+                    <span class="stage-time"></span>
+                </div>
+            </div>
+            <p class="loading-text">Processing your query through the full pipeline...</p>
+        </div>
+
+        <div id="responses"></div>
+    </main>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

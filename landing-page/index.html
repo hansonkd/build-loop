@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glass — AI you can watch</title>
+    <style>
+        :root {
+            --bg: #0a0a0b;
+            --surface: #141416;
+            --border: #27272a;
+            --text: #fafafa;
+            --text-muted: #a1a1aa;
+            --verified: #22c55e;
+            --uncertain: #eab308;
+            --unverifiable: #71717a;
+            --accent: #3b82f6;
+            --process-bg: #0f0f12;
+            --audit-local: #22c55e;
+            --audit-external: #eab308;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Hero */
+        .hero {
+            padding: 100px 0 60px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 64px;
+            font-weight: 700;
+            letter-spacing: -2px;
+            margin-bottom: 16px;
+        }
+
+        .hero .tagline {
+            font-size: 22px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .hero .subtagline {
+            font-size: 15px;
+            color: var(--text-muted);
+            margin-bottom: 40px;
+            max-width: 520px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.7;
+        }
+
+        .cta {
+            display: inline-block;
+            background: var(--accent);
+            color: white;
+            text-decoration: none;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+
+        .cta:hover { opacity: 0.85; }
+
+        /* Sections */
+        .section {
+            padding: 60px 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .section h2 {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            margin-bottom: 20px;
+        }
+
+        .section p {
+            font-size: 16px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            line-height: 1.8;
+        }
+
+        /* Process demo — the new centerpiece */
+        .process-demo {
+            margin: 32px 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        @media (max-width: 600px) {
+            .process-demo { grid-template-columns: 1fr; }
+        }
+
+        .process-side {
+            background: var(--process-bg);
+            padding: 16px;
+            border-right: 1px solid var(--border);
+        }
+
+        @media (max-width: 600px) {
+            .process-side { border-right: none; border-bottom: 1px solid var(--border); }
+        }
+
+        .result-side {
+            background: var(--surface);
+            padding: 16px;
+        }
+
+        .col-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        /* Mini audit events */
+        .demo-event {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 12px;
+        }
+
+        .demo-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 4px;
+        }
+
+        .demo-dot.local { background: var(--audit-local); }
+        .demo-dot.external { background: var(--audit-external); }
+
+        .demo-event-text {
+            color: var(--text);
+            font-weight: 500;
+            font-size: 12px;
+        }
+
+        .demo-event-meta {
+            color: var(--text-muted);
+            font-size: 11px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+
+        .demo-event-flow {
+            font-size: 10px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            color: var(--text-muted);
+        }
+
+        .demo-event-flow .up { color: var(--audit-external); }
+        .demo-event-flow .down { color: var(--audit-local); }
+
+        /* Demo seal */
+        .demo-seal {
+            margin-top: 10px;
+            padding: 8px 10px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .demo-seal-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+
+        .demo-seal-hash {
+            font-size: 11px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            color: var(--accent);
+            background: rgba(59, 130, 246, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .demo-seal-status {
+            font-size: 10px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            color: var(--verified);
+        }
+
+        /* Claims demo */
+        .demo-claims { margin-top: 12px; }
+
+        .demo-claim {
+            padding: 8px 10px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            border-left: 3px solid;
+            background: rgba(255, 255, 255, 0.02);
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .demo-claim.verified { border-left-color: var(--verified); }
+        .demo-claim.uncertain { border-left-color: var(--uncertain); }
+        .demo-claim.unverifiable { border-left-color: var(--unverifiable); }
+
+        .badge {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 2px 6px;
+            border-radius: 3px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .badge.verified { color: var(--verified); background: rgba(34, 197, 94, 0.15); }
+        .badge.uncertain { color: var(--uncertain); background: rgba(234, 179, 8, 0.15); }
+        .badge.unverifiable { color: var(--unverifiable); background: rgba(113, 113, 122, 0.15); }
+
+        .claim-text {
+            font-size: 13px;
+            color: var(--text);
+        }
+
+        .demo-answer {
+            font-size: 13px;
+            color: var(--text);
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        /* Principles */
+        .principles {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .principle {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .principle h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .principle p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 0;
+        }
+
+        /* The why */
+        .why-list {
+            margin: 20px 0;
+            list-style: none;
+        }
+
+        .why-list li {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 15px;
+            color: var(--text-muted);
+            line-height: 1.7;
+        }
+
+        .why-list li:last-child { border-bottom: none; }
+
+        .why-list li strong {
+            color: var(--text);
+        }
+
+        /* Footer */
+        footer {
+            padding: 40px 0;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        footer a { color: var(--accent); text-decoration: none; }
+
+        @media (max-width: 600px) {
+            .hero h1 { font-size: 40px; }
+            .hero .tagline { font-size: 18px; }
+            .principles { grid-template-columns: 1fr; }
+            .hero { padding: 80px 0 60px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <section class="hero">
+            <h1>Glass</h1>
+            <p class="tagline">AI you can watch -- and prove you watched.</p>
+            <p class="subtagline">Every thought, every action, every byte -- sealed with a cryptographic chain you can verify without trusting us. The process is the interface. The seal is the receipt.</p>
+            <a href="http://localhost:7777" class="cta">Try the Demo</a>
+        </section>
+
+        <section class="section">
+            <h2>The process is the product. The seal is the proof.</h2>
+            <p>Most AI tools show you a loading spinner, then an answer. You have no idea what happened in between. Glass inverts this: the left column shows every operation the AI performed -- which models were called, where your data went, how long each step took. The right column shows the result with verified claims. Every response carries a provenance seal -- a cryptographic hash chain over the audit trail that anyone can verify independently, without trusting Glass.</p>
+
+            <div class="process-demo">
+                <div class="process-side">
+                    <div class="col-label">Process -- what Glass did</div>
+                    <div class="demo-event">
+                        <span class="demo-dot local"></span>
+                        <div>
+                            <div class="demo-event-text">Generate response via ollama (llama3.2)</div>
+                            <div class="demo-event-meta">1,240ms -- local/ollama</div>
+                            <div class="demo-event-flow"><span class="up">&uarr; 1.2 KB</span> <span class="down">&darr; 2.8 KB</span></div>
+                        </div>
+                    </div>
+                    <div class="demo-event">
+                        <span class="demo-dot local"></span>
+                        <div>
+                            <div class="demo-event-text">Decompose response into claims</div>
+                            <div class="demo-event-meta">680ms -- local/ollama</div>
+                            <div class="demo-event-flow"><span class="up">&uarr; 3.1 KB</span> <span class="down">&darr; 0.9 KB</span></div>
+                        </div>
+                    </div>
+                    <div class="demo-event">
+                        <span class="demo-dot local"></span>
+                        <div>
+                            <div class="demo-event-text">Verify claims via ollama (llama3.2)</div>
+                            <div class="demo-event-meta">920ms -- local/ollama</div>
+                            <div class="demo-event-flow"><span class="up">&uarr; 4.2 KB</span> <span class="down">&darr; 1.1 KB</span></div>
+                        </div>
+                    </div>
+                    <div class="demo-event">
+                        <span class="demo-dot local"></span>
+                        <div>
+                            <div class="demo-event-text">Save to local SQLite</div>
+                            <div class="demo-event-meta">3ms -- local/sqlite</div>
+                        </div>
+                    </div>
+                    <div class="demo-seal">
+                        <div class="demo-seal-label">Provenance Seal</div>
+                        <code class="demo-seal-hash">a3f8c1d9e7b24f06...</code>
+                        <span class="demo-seal-status">Chain intact -- 4 events verified</span>
+                    </div>
+                </div>
+                <div class="result-side">
+                    <div class="col-label">Result -- what Glass found</div>
+                    <div class="demo-answer">Python 3.12 introduced several performance improvements, including specialization of comprehensions and a new perf profiler integration...</div>
+                    <div class="demo-claims">
+                        <div class="demo-claim verified">
+                            <span class="badge verified">Verified</span>
+                            <span class="claim-text">Python 3.12 was released on October 2, 2023.</span>
+                        </div>
+                        <div class="demo-claim uncertain">
+                            <span class="badge uncertain">Uncertain</span>
+                            <span class="claim-text">Performance improved approximately 25% for most workloads.</span>
+                        </div>
+                        <div class="demo-claim unverifiable">
+                            <span class="badge unverifiable">Unverifiable</span>
+                            <span class="claim-text">This makes Python competitive with Go for web throughput.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Why this matters now</h2>
+            <ul class="why-list">
+                <li><strong>AI agents lie about their own success.</strong> Developers building multi-agent systems discovered that agents suppress errors and fake progress. Glass shows ground truth: what actually happened, not what the AI claims happened.</li>
+                <li><strong>Supply chains are compromised.</strong> LiteLLM was poisoned for 40 minutes and hit hundreds of thousands of machines. ChatGPT fingerprints 55 fields of browser state. You cannot trust the infrastructure unless you can see the data flows.</li>
+                <li><strong>AI is now a security weapon.</strong> Claude Code discovered a 23-year-old Linux kernel vulnerability. Claude wrote a remote kernel exploit for FreeBSD. If AI can find zero-days, every action it takes must be auditable. An unaudited AI agent is indistinguishable from a compromised one.</li>
+                <li><strong>AI hides its own identity.</strong> Anthropic's leaked Claude Code source revealed "undercover mode" -- AI instructed to hide that it authored code in public repos. Then Anthropic DMCAs its own forks. If the companies building AI won't be transparent, the tool must enforce transparency architecturally.</li>
+                <li><strong>Nobody is accountable.</strong> Courts publish AI-hallucinated citations. Police arrest innocent people on AI facial recognition. The pattern is always the same: AI makes a confident decision, a human rubber-stamps it, someone gets hurt. Glass makes the AI's process visible enough that you can actually verify before acting.</li>
+                <li><strong>Local-first has won.</strong> Gemma 4 runs on a Raspberry Pi. 397B models run on a MacBook. 1-bit models run at 132 tok/s on an iPhone. The question is no longer "can I run AI locally?" -- it is "why am I still sending my data to a company I don't trust?"</li>
+                <li><strong>Visibility is not enough -- you need proof.</strong> Showing your process is good. But in a world where AI-generated text is indistinguishable from human text and "too-perfect" code is the new red flag, you need cryptographic proof that the record was not altered. Provenance seals give you a receipt you can check without trusting Glass.</li>
+            </ul>
+        </section>
+
+        <section class="section">
+            <h2>Core principles</h2>
+            <div class="principles">
+                <div class="principle">
+                    <h3>Honest by structure</h3>
+                    <p>Verification is architectural, not prompt-engineered. A separate verifier checks every claim.</p>
+                </div>
+                <div class="principle">
+                    <h3>Process-first</h3>
+                    <p>The process is the primary interface. The audit trail is always visible, not hidden behind a toggle.</p>
+                </div>
+                <div class="principle">
+                    <h3>Anti-sycophancy</h3>
+                    <p>When you're wrong, it says so. Confidence scores are real, not performative.</p>
+                </div>
+                <div class="principle">
+                    <h3>Local-first</h3>
+                    <p>Runs on your hardware via Ollama. Cloud is opt-in with visible data flow indicators.</p>
+                </div>
+                <div class="principle">
+                    <h3>Verifiable over impressive</h3>
+                    <p>"I can verify X but not Y" beats a confident-sounding complete answer.</p>
+                </div>
+                <div class="principle">
+                    <h3>Auditable actions</h3>
+                    <p>Every LLM call, every byte sent, every operation logged. The audit trail is the proof.</p>
+                </div>
+                <div class="principle">
+                    <h3>Provenance seals</h3>
+                    <p>Every response carries a cryptographic hash chain. Verify the seal without trusting Glass.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>How it works</h2>
+            <p>Glass runs your query through a five-stage pipeline. Every stage is visible in the process column as it happens:</p>
+            <p><strong>Generate</strong> -- An LLM produces a response with explicit step-by-step reasoning.<br>
+            <strong>Decompose</strong> -- The response is broken into atomic, checkable claims.<br>
+            <strong>Verify</strong> -- Each claim is independently assessed for consistency and evidentiary support.<br>
+            <strong>Audit</strong> -- Every operation is logged: which calls were made, where data went, how long it took, how many bytes moved.<br>
+            <strong>Seal</strong> -- A cryptographic hash chain is computed over the audit trail. The seal proves the trail is unaltered. Anyone can verify it by recomputing the hashes.</p>
+            <p>The result is presented in a two-column layout. Left: the process (audit trail + reasoning trace + provenance seal). Right: the result (answer + verified claims). You see both simultaneously. The process is not hidden -- it is the primary evidence that Glass is doing what it claims. The seal is the proof that the evidence has not been tampered with.</p>
+        </section>
+
+        <footer>
+            Glass is open source. Built from the conviction that AI should be watchable -- and provably honest -- by the people who use it.
+        </footer>
+    </div>
+</body>
+</html>

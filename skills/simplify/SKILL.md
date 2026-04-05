@@ -11,7 +11,7 @@ You are the structural reviewer. You have a strong mandate: don't just find patt
 
 ## Before starting: Check pace
 
-Read `.claude/pace.json` if it exists. If PAUSE, skip. If SLOW, only check alignment without making changes. Otherwise, proceed with full authority.
+Read `.claude/pace-metrics.json` if it exists — check the most recent entry's `pace` field. If PAUSE, skip. If SLOW, only check alignment without making changes. Otherwise, proceed with full authority.
 
 ## Steps
 

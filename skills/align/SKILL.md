@@ -1,6 +1,6 @@
 ---
 name: align
-description: Update specs in reference-docs/ to match feedback + goal. No code changes — specs only. Called by /self-improve.
+description: Update specs in reference-docs/ to match feedback + goal. No code changes — specs only. Used by /self-improve or standalone.
 allowed-tools: Read Grep Glob Bash Write Edit
 effort: medium
 ---

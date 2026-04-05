@@ -11,7 +11,7 @@ Pick the single highest-impact gap between specs and code. Update spec, implemen
 
 ## Before starting: Check pace
 
-Read `.claude/pace.json` and `.claude/pace-metrics.json` if they exist. If pace is PAUSE, skip. If SLOW, only fix BROKEN items. If CONSERVE, use sonnet subagents instead of opus.
+Read `.claude/pace-metrics.json` if they exist. If pace is PAUSE, skip. If SLOW, only fix BROKEN items. If CONSERVE, use sonnet subagents instead of opus.
 
 ## Steps
 

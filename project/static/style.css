@@ -318,6 +318,13 @@ main {
     border-radius: 3px;
 }
 
+.provenance-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
 .seal-verify-btn {
     font-size: 11px;
     font-weight: 600;
@@ -350,6 +357,36 @@ main {
     border-color: var(--error);
     color: var(--error);
     cursor: default;
+}
+
+/* Export bundle button */
+.bundle-export-btn {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--text-muted);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.bundle-export-btn:hover {
+    background: rgba(139, 148, 158, 0.1);
+    border-color: var(--text);
+    color: var(--text);
+}
+
+.bundle-export-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.bundle-export-btn.exported {
+    border-color: var(--verified);
+    color: var(--verified);
 }
 
 .seal-status {

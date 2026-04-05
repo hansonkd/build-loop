@@ -38,6 +38,20 @@ Glass answers this with **Provenance Seals**: a cryptographic hash chain over th
 
 This reflects what HN has been saying for three years: **trust is not a feature you bolt on. Trust is the architecture.** And architecture means structure you can verify, not promises you have to believe.
 
+### The Next Shift: Portable Proof
+
+By April 2026, the HN community has articulated a demand that goes beyond "show me what you did." The LiteLLM supply chain attack hit hundreds of thousands of machines in 40 minutes -- and afterward, nobody could prove what had been real and what had been tampered with. The Claude Code leak revealed AI instructed to hide its own identity in public repositories. A Tennessee grandmother spent five months in jail because AI facial recognition produced a match that nobody could independently audit. The pattern is consistent: when trust collapses, you need receipts you can take somewhere else.
+
+Glass answers this with **Exportable Proof Bundles**: a self-contained JSON document that packages the complete audit trail, provenance seal, verification results, and all metadata needed for independent verification. The bundle is portable -- download it, email it, attach it to a report, archive it for a decade. It is self-verifying -- it contains the chain hashes and the algorithm description needed to recompute them without Glass running. It is human-readable -- every field is labeled, every operation is described in plain language.
+
+This is not a feature. It is the architectural answer to a world where:
+- Supply chains are poisoned and you need to prove what your AI actually did during the compromise window
+- AI hides its own identity and you need proof of what process produced a given output
+- Courts publish AI-hallucinated citations and you need to demonstrate that your AI's claims were independently verified
+- Agents lie about their own success and you need ground truth you can hand to an auditor
+
+The proof bundle transforms Glass from "AI you can watch" into **"AI that gives you a receipt anyone can check."** The seal proves the trail is unaltered. The bundle makes the seal portable. Together, they mean that trust in Glass is never required -- only verification.
+
 ### Why This Matters
 
 The honest-AI gap is no longer just about hallucination. It is about the entire trust surface:
@@ -47,5 +61,6 @@ The honest-AI gap is no longer just about hallucination. It is about the entire 
 - **Accountability** -- From wrongful arrests to fabricated court citations, the pattern is identical: AI makes a confident decision, humans accept it without verification, someone gets hurt. Glass makes the AI's process visible enough that verification is possible -- not just theoretically, but in the normal flow of using the tool. The seal makes this verification auditable by third parties.
 - **Provenance in the age of AI authorship** -- The Claude Code leak revealed AI instructed to hide its identity. HN discussions now routinely debate whether code, text, and even legal filings were AI-generated. Glass does not hide. It signs. Every response carries a verifiable chain proving exactly what process produced it.
 - **Agent observability** -- Multi-agent systems are becoming standard. Developers already build "separation of powers" architectures with builder, reviewer, and tester agents. Glass provides the observability layer: what did each step actually do, and does the ground truth match the agent's summary?
+- **Portable proof for a post-trust world** -- When LiteLLM is poisoned for 40 minutes and hits hundreds of thousands of machines, when courts publish AI-hallucinated citations, when police arrest innocent people based on AI matches nobody can audit -- the demand is not just "show me what happened" but "give me proof I can take to someone who wasn't there." Exportable proof bundles make Glass's audit trail a first-class document: downloadable, shareable, archivable, and independently verifiable without Glass running.
 
-The first system that makes AI operations watchable in real time -- with cryptographic proof that the record is unaltered -- does not just build a better chatbot. It establishes the norm that AI systems must be observable and provably honest.
+The first system that makes AI operations watchable in real time -- with cryptographic proof that the record is unaltered and exportable proof that anyone can verify -- does not just build a better chatbot. It establishes the norm that AI systems must be observable, provably honest, and accountable to third parties.

@@ -71,7 +71,18 @@ After all pipeline stages complete, the audit trail is sealed with a provenance 
 - Verification is a pure local computation -- no external service, no secret key, no trust required
 - The `/api/response/{id}/verify` endpoint recomputes the chain and reports whether the seal is intact
 
-### 5. Renderer (Frontend)
+### 5. Proof Bundle Export (`glass/audit.py`)
+
+After a response is complete and sealed, it can be exported as a self-contained proof bundle.
+
+- The bundle is a JSON document containing: query, response, claims, audit trail, provenance seal, backend, timestamp, and verification instructions
+- The `verification_instructions` field contains a plain-language description of the SHA-256 chain algorithm, enabling any third party to write their own verifier
+- The bundle includes a `bundle_generated_at` timestamp and a `glass_version` field for provenance
+- Export is available via `GET /api/response/{id}/bundle` and via a download button in the UI
+- The bundle is designed for portability: email it, archive it, attach it to a compliance report, or verify it on an air-gapped machine
+- No secrets, API keys, or user-identifying information are included in the bundle
+
+### 6. Renderer (Frontend)
 
 Takes the verified response and presents it in the browser with a **process-first layout**.
 
@@ -154,6 +165,7 @@ All endpoints are served by FastAPI.
 | GET | `/api/response/{id}` | Get a specific response with all claims and audit trail |
 | GET | `/api/response/{id}/audit` | Get just the audit trail for a specific response |
 | GET | `/api/response/{id}/verify` | Recompute provenance chain and verify the seal is intact |
+| GET | `/api/response/{id}/bundle` | Export a self-contained proof bundle (JSON) for independent verification |
 | GET | `/api/memory` | List all memory entries |
 | DELETE | `/api/memory/{id}` | Delete a specific memory entry |
 | GET | `/api/status` | Backend health check (is Ollama running? which model?) |

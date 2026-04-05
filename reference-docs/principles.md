@@ -73,3 +73,15 @@ Every response carries a cryptographic hash chain that proves the audit trail ha
 - If any event in the chain is modified, inserted, or removed, the seal breaks and the UI shows it
 - The provenance seal is not encryption or DRM -- it is a receipt. The user owns it. It proves what Glass did, to anyone, at any time
 - The seal is computed locally and never requires an external service
+
+## 8. Portable Proof
+
+Every response can be exported as a self-contained proof bundle that anyone can verify independently, without Glass running. Trust is not trapped inside the application.
+
+- The proof bundle is a single JSON file containing: the query, the full response, all claims with verification status, the complete audit trail, the provenance seal, and a description of the verification algorithm
+- The bundle is downloadable from the UI with one click and from the API with one GET request
+- Anyone can verify the bundle by recomputing the SHA-256 chain from the raw events -- no Glass installation, no API key, no trust required
+- The bundle is human-readable: every field is labeled, every operation is described in plain language, timestamps are ISO 8601
+- The bundle includes a `verification_instructions` field that describes the exact algorithm to verify the seal, so a third party can write their own verifier
+- The bundle never contains secrets, API keys, or identifying information about the user -- only the process and its proof
+- Export is always available, even when no backend is connected -- proof of past responses is never gated behind a running service

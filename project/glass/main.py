@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from glass.audit import AuditTrail, AuditedTimer, content_hash, verify_seal
+from glass.audit import AuditTrail, AuditedTimer, build_proof_bundle, content_hash, verify_seal
 from glass.config import Settings
 from glass.db import (
     delete_memory,
@@ -165,6 +165,37 @@ async def verify_response_provenance(response_id: str):
         "message": message,
         "events_checked": len(resp.audit_trail),
     }
+
+
+@app.get("/api/response/{response_id}/bundle")
+async def export_proof_bundle(response_id: str):
+    """Export a self-contained proof bundle for independent verification.
+
+    The bundle is a JSON document containing everything needed to verify
+    that the audit trail has not been tampered with. No Glass installation,
+    no API key, no trust required -- just SHA-256.
+    """
+    resp = get_response(settings.db_path, response_id)
+    if resp is None:
+        raise HTTPException(status_code=404, detail="Response not found")
+
+    bundle = build_proof_bundle(resp)
+
+    # Verify the seal inline so the bundle includes verification status
+    is_valid, message = verify_seal(resp.audit_trail)
+    if is_valid and resp.audit_trail:
+        recomputed = resp.audit_trail[-1].chain_hash
+        if resp.provenance_seal and resp.provenance_seal != recomputed:
+            is_valid = False
+            message = f"Stored seal does not match recomputed chain"
+
+    bundle["seal_status"] = {
+        "verified": is_valid,
+        "message": message,
+        "events_checked": len(resp.audit_trail),
+    }
+
+    return bundle
 
 
 @app.get("/api/memory")

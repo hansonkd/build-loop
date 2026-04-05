@@ -95,6 +95,34 @@ function renderAuditTimeline(auditTrail) {
     }).join('');
 }
 
+async function exportBundle(responseId, btnEl) {
+    btnEl.disabled = true;
+    btnEl.textContent = 'Exporting...';
+    try {
+        const resp = await fetch(`/api/response/${responseId}/bundle`);
+        const bundle = await resp.json();
+        const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `glass-proof-${responseId.substring(0, 8)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        btnEl.textContent = 'Exported';
+        btnEl.className = 'bundle-export-btn exported';
+        setTimeout(() => {
+            btnEl.textContent = 'Export Proof';
+            btnEl.className = 'bundle-export-btn';
+            btnEl.disabled = false;
+        }, 2000);
+    } catch (err) {
+        btnEl.textContent = 'Error';
+        btnEl.disabled = false;
+    }
+}
+
 async function verifySeal(responseId, btnEl) {
     btnEl.disabled = true;
     btnEl.textContent = 'Checking...';
@@ -173,7 +201,10 @@ function renderResponse(data) {
                     <code class="provenance-hash">${esc(sealDisplay)}</code>
                     <span class="seal-status" id="seal-status-${responseId}"></span>
                 </div>
-                <button class="seal-verify-btn" onclick="verifySeal('${responseId}', this)">Verify Chain</button>
+                <div class="provenance-actions">
+                    <button class="seal-verify-btn" onclick="verifySeal('${responseId}', this)">Verify Chain</button>
+                    <button class="bundle-export-btn" onclick="exportBundle('${responseId}', this)">Export Proof</button>
+                </div>
             </div>
             ${premiseHtml}
             <div class="response-columns">

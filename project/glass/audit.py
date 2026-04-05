@@ -105,6 +105,59 @@ def content_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
+VERIFICATION_INSTRUCTIONS = """To verify this proof bundle independently:
+
+1. Start with prev_hash = "genesis"
+2. For each event in the audit_trail array, in order:
+   a. Build a canonical string: "{timestamp}|{operation}|{description}|{backend}|{latency_ms}|{bytes_sent}|{bytes_received}|{destination}|{content_hash}"
+   b. Compute event_digest = SHA-256(canonical_string) as a hex string
+   c. Compute expected_chain_hash = SHA-256("{prev_hash}:{event_digest}") as a hex string
+   d. Compare expected_chain_hash to the event's chain_hash field. If they differ, the chain is broken.
+   e. Set prev_hash = event's chain_hash
+3. After processing all events, the last event's chain_hash should equal the provenance_seal field.
+4. If all checks pass, the audit trail is intact and has not been tampered with.
+
+This verification requires only SHA-256 (available in any programming language) and no trust in Glass."""
+
+GLASS_VERSION = "0.4.0"
+
+
+def build_proof_bundle(response) -> dict:
+    """Build a self-contained, portable proof bundle from a GlassResponse.
+
+    The bundle contains everything needed to independently verify that
+    the audit trail has not been tampered with. No Glass installation,
+    no API key, no trust required -- just SHA-256.
+    """
+    from datetime import datetime, timezone
+
+    return {
+        "proof_bundle_version": "1.0",
+        "glass_version": GLASS_VERSION,
+        "bundle_generated_at": datetime.now(timezone.utc).isoformat(),
+        "verification_instructions": VERIFICATION_INSTRUCTIONS.strip(),
+        "response": {
+            "id": response.id,
+            "query": response.query,
+            "raw_response": response.raw_response,
+            "reasoning_trace": response.reasoning_trace,
+            "claims": [c.model_dump() for c in response.claims],
+            "premise_flags": response.premise_flags,
+            "backend": response.backend,
+            "timestamp": response.timestamp,
+        },
+        "audit_trail": [e.model_dump() for e in response.audit_trail],
+        "provenance_seal": response.provenance_seal,
+        "seal_verification": {
+            "algorithm": "SHA-256 hash chain",
+            "genesis_value": "genesis",
+            "chain_length": len(response.audit_trail),
+            "canonical_format": "{timestamp}|{operation}|{description}|{backend}|{latency_ms}|{bytes_sent}|{bytes_received}|{destination}|{content_hash}",
+            "link_format": "SHA-256({prev_chain_hash}:{event_digest})",
+        },
+    }
+
+
 class AuditedTimer:
     """Context manager that measures elapsed time for an operation."""
 

@@ -1,0 +1,13 @@
+{
+  "name": "build-loop-marketplace",
+  "owner": {
+    "name": "build-loop"
+  },
+  "plugins": [
+    {
+      "name": "build-loop",
+      "source": ".",
+      "description": "Autonomous product development loop — researches, evaluates, builds, and simplifies your project continuously."
+    }
+  ]
+}

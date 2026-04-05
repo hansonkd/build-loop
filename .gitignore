@@ -1,6 +1,11 @@
 .venv/
+node_modules/
 __pycache__/
 *.pyc
 *.db
 *.egg-info/
-.claude/
+.claude/pace-metrics.json
+.claude/pace.json
+.claude/loop-log.md
+.claude/plans/
+.claude/scheduled_tasks*

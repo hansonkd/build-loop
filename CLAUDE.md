@@ -44,3 +44,15 @@ python3 landing-page/serve.py & cd project && OPENROUTER_API_KEY=... glass
 - **Never modify `reference-docs/`.** That's the user's domain. If the docs need changes, say so and stop.
 - **Never invent features.** Only build what the docs describe. If a feature seems implied but isn't specified, ask rather than assume.
 - **When in doubt, stop.** It's always better to ask the user to clarify the docs than to generate code based on assumptions.
+
+## Evaluation Rules — The Painkiller Test
+
+Every evolution cycle and every feedback round MUST ask these questions FIRST, before any technical evaluation:
+
+1. **Is this a painkiller or a vitamin?** A painkiller solves a pain people have RIGHT NOW. A vitamin makes things theoretically better. If the project is a vitamin, stop and reconsider the entire direction before optimizing further.
+2. **Would a real person use this daily?** Not "would they admire the architecture" or "would it satisfy an auditor" — would they open it every day because it makes them more effective?
+3. **Would someone pay for this with their own money?** Not their company's compliance budget. Their own credit card. If not, the value prop is too abstract.
+4. **What specific pain does this eliminate?** Name the pain in one sentence. If you can't, the project doesn't have product-market fit.
+5. **Does this make people more effective, or just safer?** People buy effectiveness. Safety is a feature of effective tools, not a product category.
+
+These questions override all technical feedback. A perfectly engineered product nobody wants is worse than a rough product everyone needs.

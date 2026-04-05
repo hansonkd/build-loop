@@ -1,0 +1,10 @@
+{
+  "name": "build-loop",
+  "version": "0.1.0",
+  "description": "Autonomous product development skills for Claude Code",
+  "private": true,
+  "dependencies": {
+    "claude-rate-monitor": "^1.0.0",
+    "ccusage": "^18.0.0"
+  }
+}

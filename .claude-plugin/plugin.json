@@ -1,0 +1,11 @@
+{
+  "name": "build-loop",
+  "version": "0.1.0",
+  "description": "Autonomous product development loop for Claude Code. Continuously researches, evaluates, builds, and simplifies your project based on a goal you set.",
+  "author": {
+    "name": "build-loop"
+  },
+  "keywords": ["autonomous", "product-development", "self-improving", "loop", "spec-driven"],
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
+}

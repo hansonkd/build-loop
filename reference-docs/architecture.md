@@ -14,6 +14,10 @@ User Query → Generator → Decomposer → Verifier → Seal → Renderer
 
 Each stage is a distinct module. The generator produces a response, the decomposer breaks it into claims, the consistency checker assesses each claim, the sealer computes a cryptographic hash chain over the audit trail, and the renderer presents everything with full transparency. The audit trail captures every operation across all stages. The provenance seal proves the trail has not been tampered with.
 
+**Multi-model verification** (v0.7): When `GLASS_VERIFIER_BACKEND` is set, the consistency checker runs on a different model/backend than the generator. This decouples generation from verification -- the first step toward actual independence. The verifier backend and model are recorded in the response and proof bundle, making the separation auditable.
+
+**Cloud confirmation gate** (v0.7): When `GLASS_CLOUD_CONFIRM=1`, cloud backends (openrouter, claude) are blocked until the user explicitly calls `POST /api/cloud/confirm`. The gate resets every session. Architecture enforces what policy only promises.
+
 ## Pipeline Stages
 
 ### 1. Generator (`glass/generator.py`)
@@ -172,13 +176,15 @@ All endpoints are served by FastAPI.
 | GET | `/api/response/{id}/bundle.pdf` | Export proof bundle as a formatted PDF document with header, signature block, and control references |
 | GET | `/api/memory` | List all memory entries |
 | DELETE | `/api/memory/{id}` | Delete a specific memory entry |
-| GET | `/api/status` | Backend health check (is Ollama running? which model?) |
+| GET | `/api/status` | Backend health check (is Ollama running? which model? verifier config? cloud gate?) |
 | GET | `/healthz` | Liveness probe — returns 200 if the process is running (for k8s/load balancers) |
 | GET | `/readyz` | Readiness probe — returns 200 only if an LLM backend is available and the database is accessible |
 | POST | `/api/query/stream` | SSE streaming query — real pipeline progress events instead of fake animation |
 | POST | `/api/calibrate` | Submit ground-truth judgment for a claim (correct/incorrect/ambiguous) |
 | GET | `/api/calibration` | Calibration metrics — per-status accuracy, calibration gap |
 | GET | `/api/calibration/judgments` | List recorded ground-truth judgments |
+| GET | `/api/cloud/status` | Check whether cloud data egress has been confirmed |
+| POST | `/api/cloud/confirm` | Explicitly confirm cloud data egress for this session |
 
 ## Logging
 
@@ -204,21 +210,23 @@ Log level and format are configured via environment variables. The structured fo
 project/
 ├── glass/
 │   ├── __init__.py
-│   ├── main.py          # FastAPI app, routes, startup
+│   ├── main.py          # FastAPI app, routes, startup, cloud gate, multi-model routing
 │   ├── generator.py     # LLM interaction (Ollama + Claude)
 │   ├── decomposer.py    # Claim extraction
-│   ├── verifier.py      # Claim consistency checking
+│   ├── verifier.py      # Claim consistency checking (routes to verifier backend when configured)
 │   ├── llm_client.py    # Shared LLM call + JSON extraction (used by decomposer & verifier)
 │   ├── audit.py         # Audit trail collection and persistence
 │   ├── auth.py          # Bearer token authentication middleware
 │   ├── calibration.py   # Ground-truth judgments + calibration metrics
 │   ├── models.py        # Pydantic models (Claim, AuditEvent, Response, Memory)
 │   ├── db.py            # SQLite operations (WAL mode enabled)
-│   └── config.py        # Settings, backend selection
+│   └── config.py        # Settings, backend selection, verifier overrides, cloud gate
 ├── static/
-│   ├── index.html        # Single-page app
-│   ├── style.css         # Dark theme, claim annotations, audit trail
-│   └── app.js            # Frontend logic, rendering, audit timeline
+│   ├── index.html        # Single-page app (includes cloud confirmation gate UI)
+│   ├── style.css         # Dark theme, claim annotations, audit trail, cloud gate modal
+│   └── app.js            # Frontend logic, rendering, audit timeline, cloud confirmation
+├── Dockerfile             # Production container — non-root, health checks, data volume
+├── .dockerignore          # Excludes tests, cache, dev artifacts from container
 ├── pyproject.toml         # Project metadata + dependencies
 └── README.md              # How to run
 ```
@@ -235,3 +243,4 @@ If Ollama is not running and no API keys are set:
 
 - **Demo (port 7777)**: The Glass app runs on port 7777 with OpenRouter as the default cloud backend
 - **Landing page (port 80)**: A separate static site in `landing-page/` describes what Glass is and links to the demo
+- **Container (Docker)**: `docker build -t glass . && docker run -p 7777:7777 -e ANTHROPIC_API_KEY=sk-... glass`. Runs as non-root (uid 1000), SQLite in /data volume, health checks built in. For local Ollama: `-e OLLAMA_BASE_URL=http://host.docker.internal:11434`

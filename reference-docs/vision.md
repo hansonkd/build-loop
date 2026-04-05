@@ -99,3 +99,25 @@ The HN community's "dangerously sanitized optimism" finding -- that agents lie a
 Glass v0.6 replaces this with **Server-Sent Events (SSE)**. The `/api/query/stream` endpoint emits real events as each pipeline stage completes on the server. The frontend renders these events as they arrive -- no timers, no simulation, no fake animation. Every stage indicator in the UI reflects actual server-side completion.
 
 A transparency tool that simulates its own transparency is a contradiction. The SSE pipeline is the fix.
+
+### The January-February 2026 Signals: Architecture Over Policy
+
+Diving deep into January and February 2026 HN digests reveals three signals that peaked in this period and demand architectural responses Glass had not yet provided:
+
+**1. The "Always Allow" Catastrophe (Jan 8, 2026)**
+
+IBM's "Bob" AI agent was tricked via indirect prompt injection into downloading and executing malware -- because a user had enabled "always allow" for shell commands. The HN discussion (256 points, 116 comments) reached a clear consensus: "allowing an LLM to execute arbitrary code on a user's local machine without a strict sandbox is fundamentally reckless." The broader thread on agentic security (Signal leaders at 39C3, Jan 13, 334 points) reinforced: agents are probabilistic; even at 95% per-step accuracy, a 10-step task drops to ~60% success. The Juno "always-on assistant" discussion (Feb 20) crystallized the principle: "Policy is a promise. Architecture is a guarantee."
+
+Glass v0.7 answers this with the **Cloud Confirmation Gate**. When `GLASS_CLOUD_CONFIRM=1`, no query data leaves the machine until the user explicitly calls `POST /api/cloud/confirm`. The gate resets every session. This is not a toggle buried in settings -- it is a modal overlay in the UI that blocks all queries until the user consciously authorizes cloud data flows. The gate applies to both synchronous and streaming endpoints. There is no way to bypass it.
+
+**2. The Harness Matters More Than the Model (Feb 12, 2026)**
+
+"Improving 15 LLMs at Coding in One Afternoon. Only the Harness Changed" (755 points, 273 comments) demonstrated that the infrastructure around the model is the dominant factor in reliability. The "LLM-as-a-Courtroom" approach (Jan 27) -- prosecutor, defense, jury, judge -- showed that adversarial agents produce more reliable decisions than single-model scoring. "Distinct AI Models Seem to Converge on How They Encode Reality" (Jan 8) showed that different models share representations but have different failure modes.
+
+Glass's stated architectural weakness has always been: the consistency checker uses the same type of LLM as the generator. Glass v0.7 answers this with **Multi-Model Verification**. Set `GLASS_VERIFIER_BACKEND` and `GLASS_VERIFIER_MODEL` to run the verifier on a different model than the generator. This does not claim to be "independent verification" -- it claims to be structurally less likely to share the same blind spots. The verifier backend is recorded in every response and proof bundle, making the separation auditable.
+
+**3. Container-Ready Deployment (Jan-Feb 2026)**
+
+The Matchlock sandbox (Feb 8, 142 points) showed that "being able to prove via infrastructure that an agent literally cannot access the host network is a much stronger compliance story than relying on soft system prompts." The Amla WASM sandbox (Jan 30, 139 points) reinforced: the compliance market demands provable isolation. The "AI free" indie game movement (Nov 2025) and Games Workshop's AI ban (Jan 13) showed that authenticity claims need verifiable deployment boundaries.
+
+Glass v0.7 adds a **Dockerfile** for production container deployment. The container runs as non-root (uid 1000), uses a dedicated /data volume for SQLite, includes health checks via the built-in liveness probe, and supports all backend configurations via environment variables. This is the deployment answer for compliance teams who need to prove Glass runs in a controlled environment.

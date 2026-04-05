@@ -10,14 +10,21 @@ const responsesDiv = document.getElementById('responses');
 
 let backendAvailable = false;
 let currentBackendName = '';
+let cloudConfirmed = true;
 
 async function checkStatus() {
     try {
         const resp = await fetch('/api/status');
         const data = await resp.json();
 
+        cloudConfirmed = data.cloud_confirmed !== false;
+
         if (data.backend) {
-            statusBadge.textContent = data.message;
+            let msg = data.message;
+            if (data.verifier_backend) {
+                msg += ` | verifier: ${data.verifier_backend} (${data.verifier_model})`;
+            }
+            statusBadge.textContent = msg;
             statusBadge.className = 'online';
             backendAvailable = true;
             currentBackendName = data.backend;
@@ -32,8 +39,20 @@ async function checkStatus() {
                     'openrouter': 'openrouter.ai'
                 };
                 cloudDest.textContent = destMap[data.backend] || 'an external API';
+
+                // Show cloud gate if not yet confirmed
+                const gateEl = document.getElementById('cloud-gate');
+                if (gateEl && !cloudConfirmed) {
+                    gateEl.classList.add('visible');
+                    queryInput.disabled = true;
+                    submitBtn.disabled = true;
+                } else if (gateEl) {
+                    gateEl.classList.remove('visible');
+                }
             } else {
                 cloudBanner.classList.remove('visible');
+                const gateEl = document.getElementById('cloud-gate');
+                if (gateEl) gateEl.classList.remove('visible');
             }
         } else {
             statusBadge.textContent = 'No backend';
@@ -46,6 +65,22 @@ async function checkStatus() {
     } catch {
         statusBadge.textContent = 'Error';
         statusBadge.className = 'offline';
+    }
+}
+
+async function confirmCloud() {
+    try {
+        const resp = await fetch('/api/cloud/confirm', { method: 'POST' });
+        if (resp.ok) {
+            cloudConfirmed = true;
+            const gateEl = document.getElementById('cloud-gate');
+            if (gateEl) gateEl.classList.remove('visible');
+            queryInput.disabled = false;
+            submitBtn.disabled = false;
+            await checkStatus();
+        }
+    } catch (err) {
+        alert('Failed to confirm cloud access: ' + err.message);
     }
 }
 
@@ -206,7 +241,7 @@ function renderResponse(data) {
                         <span class="ps-item">External: <span class="ps-value">${externalCalls}</span></span>
                     </div>
                 </div>
-                <span class="backend-tag">${esc(data.backend)}</span>
+                <span class="backend-tag">${esc(data.backend)}${data.verifier_backend ? ' | verifier: ' + esc(data.verifier_backend) : ''}</span>
             </div>
             <div class="provenance-bar">
                 <div class="provenance-left">

@@ -118,3 +118,25 @@ When deployed in production, Glass API endpoints require bearer token authentica
 - When no token is configured, Glass runs in open-access mode (local dev)
 - Token comparison uses constant-time comparison to prevent timing attacks
 - Auth is a security boundary, not an obscurity mechanism -- the tool remains open source and auditable
+
+## 12. Cloud Confirmation Gate
+
+No query data leaves the machine until the user explicitly confirms cloud data egress. Policy is a promise. Architecture is a guarantee.
+
+- When GLASS_CLOUD_CONFIRM=1, cloud backends (openrouter, claude) are blocked until POST /api/cloud/confirm is called
+- The gate resets every session -- confirmation is per-process, not permanent. Every deployment must consciously opt into cloud data flows
+- Local backends (ollama) are never gated -- they send no data externally
+- The frontend shows a modal overlay when the gate is active, requiring explicit user action before any query can be submitted
+- The gate applies to both /api/query and /api/query/stream -- there is no way to bypass it
+- This is the architectural answer to IBM "Bob" (HN Jan 2026): an agent tricked into auto-executing malware because the user clicked "always allow"
+
+## 13. Multi-Model Verification
+
+When configured, the consistency checker runs on a different model than the generator. This is the first step toward decoupling self-attestation from generation.
+
+- Set GLASS_VERIFIER_BACKEND and optionally GLASS_VERIFIER_MODEL to use a separate model for verification
+- The verifier backend is recorded in the response and proof bundle, making the separation auditable
+- When not configured, Glass falls back to same-model verification (the existing self-attestation model)
+- Multi-model mode does not claim to be "independent verification" -- it claims to be structurally less likely to share the same blind spots
+- The audit trail shows which backend performed each LLM call, so the verifier's operations are distinguishable from the generator's
+- This responds to the "LLM-as-a-Courtroom" signal (HN Jan 2026): adversarial or independent judgment produces more reliable decisions than single-model scoring

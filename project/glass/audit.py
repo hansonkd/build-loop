@@ -135,7 +135,7 @@ IMPORTANT — what this proves and does not prove:
 
 This verification requires only SHA-256 (available in any programming language) and no trust in Glass."""
 
-GLASS_VERSION = "0.6.0"
+GLASS_VERSION = "0.7.0"
 
 
 def build_proof_bundle(response) -> dict:
@@ -161,6 +161,7 @@ def build_proof_bundle(response) -> dict:
             "claims": [c.model_dump() for c in response.claims],
             "premise_flags": response.premise_flags,
             "backend": response.backend,
+            "verifier_backend": getattr(response, "verifier_backend", None),
             "timestamp": response.timestamp,
         },
         "compliance": response.compliance.model_dump() if hasattr(response, "compliance") else {},

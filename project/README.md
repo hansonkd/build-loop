@@ -52,6 +52,35 @@ Glass auto-detects available backends in priority order:
 | `GLASS_DB_PATH` | `glass.db` | SQLite database path |
 | `GLASS_HOST` | `0.0.0.0` | Server bind address |
 | `GLASS_PORT` | `7777` | Server port |
+| `GLASS_VERIFIER_BACKEND` | (none) | Separate backend for consistency checker: `ollama`, `openrouter`, or `claude` |
+| `GLASS_VERIFIER_MODEL` | (none) | Model name for verifier backend (e.g., `mistral`, `claude-haiku-4-20250514`) |
+| `GLASS_CLOUD_CONFIRM` | (none) | Set to `1` to require explicit cloud data egress confirmation per session |
+
+## Docker
+
+```bash
+# Build
+docker build -t glass .
+
+# Run with Claude backend
+docker run -p 7777:7777 -e ANTHROPIC_API_KEY=sk-... glass
+
+# Run with local Ollama (macOS/Windows Docker Desktop)
+docker run -p 7777:7777 -e OLLAMA_BASE_URL=http://host.docker.internal:11434 glass
+
+# Run with multi-model verification
+docker run -p 7777:7777 \
+  -e ANTHROPIC_API_KEY=sk-... \
+  -e GLASS_VERIFIER_BACKEND=ollama \
+  -e GLASS_VERIFIER_MODEL=mistral \
+  -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
+  glass
+
+# Persist data across restarts
+docker run -p 7777:7777 -v glass-data:/data -e ANTHROPIC_API_KEY=sk-... glass
+```
+
+The container runs as non-root (uid 1000) with health checks built in.
 
 ## API Endpoints
 
@@ -95,6 +124,15 @@ Glass auto-detects available backends in priority order:
 | `GET` | `/api/population?start=YYYY-MM-DD&end=YYYY-MM-DD` | Population report for auditor period sampling. Returns query hashes, seal status, claim counts |
 | `PATCH` | `/api/response/{id}/compliance` | Update compliance metadata (control_refs, retention_class, retention_period_years, legal_hold, reviewed_by, reviewed_at) |
 
+### Cloud Confirmation Gate
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/cloud/status` | Check whether cloud data egress has been confirmed |
+| `POST` | `/api/cloud/confirm` | Explicitly authorize cloud data egress for this session |
+
+When `GLASS_CLOUD_CONFIRM=1`, cloud backends are blocked until `POST /api/cloud/confirm` is called. The gate resets when the process restarts. The frontend shows a modal overlay requiring explicit user action.
+
 ### Memory
 
 | Method | Path | Description |
@@ -130,6 +168,20 @@ Set `GLASS_API_TOKEN` to enable Bearer token auth on all `/api/*` endpoints. Hea
 export GLASS_API_TOKEN="your-secret-token"
 curl -H "Authorization: Bearer your-secret-token" http://localhost:7777/api/status
 ```
+
+## Multi-Model Verification
+
+Glass can use a different model for the consistency checker than the generator. This decouples generation from verification -- structurally less likely to share the same blind spots.
+
+```bash
+# Generate with Claude, verify with local Ollama/Mistral
+export ANTHROPIC_API_KEY="sk-..."
+export GLASS_VERIFIER_BACKEND="ollama"
+export GLASS_VERIFIER_MODEL="mistral"
+glass
+```
+
+The verifier backend is recorded in every response and proof bundle. The `/api/status` endpoint reports the verifier configuration. When not configured, Glass uses the same model for both (the self-attestation model documented in prior versions).
 
 ## Calibration
 

@@ -46,6 +46,7 @@ class GlassResponse(BaseModel):
     audit_trail: list[AuditEvent]
     provenance_seal: str = ""  # Hash chain head — proves audit trail is unaltered
     backend: str  # "ollama" | "openrouter" | "claude"
+    verifier_backend: str | None = None  # Different backend used for verification (multi-model mode)
     timestamp: str
     compliance: ComplianceMetadata = ComplianceMetadata()
 
@@ -64,3 +65,6 @@ class StatusResponse(BaseModel):
     backend: str | None
     model: str | None
     message: str
+    verifier_backend: str | None = None
+    verifier_model: str | None = None
+    cloud_confirmed: bool = True

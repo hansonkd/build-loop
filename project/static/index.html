@@ -12,6 +12,16 @@
         Cloud mode — your data is being sent to <span id="cloud-dest">an external API</span>
     </div>
 
+    <div id="cloud-gate">
+        <div class="cloud-gate-content">
+            <span class="cloud-gate-icon">&#128274;</span>
+            <h3>Cloud Data Egress Requires Confirmation</h3>
+            <p>The active backend sends your query data to an external service. No data will leave your machine until you explicitly confirm.</p>
+            <p class="cloud-gate-detail">This gate resets every session. Architecture enforces what policy only promises.</p>
+            <button onclick="confirmCloud()" class="cloud-gate-btn">I understand — authorize cloud access</button>
+        </div>
+    </div>
+
     <header>
         <div class="header-left">
             <h1>Glass</h1>

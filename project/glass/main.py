@@ -51,6 +51,15 @@ settings = Settings.from_env()
 _cached_backend: str | None = None
 _backend_detected: bool = False
 
+# Cloud confirmation gate — when GLASS_CLOUD_CONFIRM=1, cloud backends are
+# blocked until the user explicitly confirms via POST /api/cloud/confirm.
+# IBM's "Bob" agent (HN Jan 2026) was tricked into auto-executing malware
+# because the user clicked "always allow." The HN consensus: "allowing an
+# LLM to execute arbitrary code without a strict sandbox is fundamentally
+# reckless." Glass applies this lesson to data egress: no data leaves the
+# machine until you explicitly open the gate. Architecture > policy.
+_cloud_confirmed: bool = not settings.cloud_confirm_required
+
 
 async def _get_backend() -> str | None:
     """Return cached backend, detecting on first call."""
@@ -125,10 +134,75 @@ async def status() -> StatusResponse:
             backend=None,
             model=None,
             message="No LLM backend available. Install Ollama or set OPENROUTER_API_KEY or ANTHROPIC_API_KEY.",
+            cloud_confirmed=_cloud_confirmed,
         )
     model_map = {"ollama": settings.ollama_model, "openrouter": settings.openrouter_model, "claude": settings.claude_model}
     model = model_map.get(backend, "unknown")
-    return StatusResponse(backend=backend, model=model, message=f"Using {backend} ({model})")
+
+    # Report verifier backend if multi-model verification is configured
+    verifier_backend = settings.verifier_backend
+    verifier_model = None
+    if verifier_backend:
+        vs = settings.verifier_settings()
+        v_model_map = {"ollama": vs.ollama_model, "openrouter": vs.openrouter_model, "claude": vs.claude_model}
+        verifier_model = v_model_map.get(verifier_backend, "unknown")
+
+    return StatusResponse(
+        backend=backend,
+        model=model,
+        message=f"Using {backend} ({model})",
+        verifier_backend=verifier_backend,
+        verifier_model=verifier_model,
+        cloud_confirmed=_cloud_confirmed,
+    )
+
+
+def _is_cloud_backend(backend: str | None) -> bool:
+    """Check if a backend sends data to external services."""
+    return backend in ("openrouter", "claude")
+
+
+@app.get("/api/cloud/status")
+async def cloud_status():
+    """Check whether cloud data egress has been confirmed.
+
+    When GLASS_CLOUD_CONFIRM=1, this returns whether the user has explicitly
+    opened the cloud gate. When cloud confirmation is not required, always
+    returns confirmed=True.
+    """
+    backend = await _get_backend()
+    return {
+        "cloud_confirm_required": settings.cloud_confirm_required,
+        "cloud_confirmed": _cloud_confirmed,
+        "backend_is_cloud": _is_cloud_backend(backend),
+        "backend": backend,
+    }
+
+
+@app.post("/api/cloud/confirm")
+async def cloud_confirm():
+    """Explicitly confirm that cloud data egress is authorized.
+
+    This is the architectural gate. Until this endpoint is called, no query
+    data will be sent to cloud backends (openrouter, claude). The gate
+    resets when the process restarts — confirmation is per-session, not
+    permanent. This is intentional: every deployment should consciously
+    opt into cloud data flows.
+
+    IBM's "Bob" AI agent was tricked into executing malware because the user
+    clicked "always allow" (HN Jan 2026). Glass applies the same lesson to
+    data egress: require explicit, per-session confirmation before any data
+    leaves the machine.
+    """
+    global _cloud_confirmed
+    _cloud_confirmed = True
+    backend = await _get_backend()
+    logger.info("Cloud data egress confirmed by user — backend: %s", backend)
+    return {
+        "status": "confirmed",
+        "message": "Cloud data egress is now authorized for this session.",
+        "backend": backend,
+    }
 
 
 @app.post("/api/query")
@@ -138,6 +212,13 @@ async def query(req: QueryRequest) -> GlassResponse:
         raise HTTPException(
             status_code=503,
             detail="No model backend is available. Install Ollama or set ANTHROPIC_API_KEY.",
+        )
+
+    # Cloud confirmation gate: block cloud queries until explicitly confirmed
+    if _is_cloud_backend(backend) and not _cloud_confirmed:
+        raise HTTPException(
+            status_code=403,
+            detail="Cloud data egress not confirmed. POST /api/cloud/confirm to authorize sending data to external services. Set GLASS_CLOUD_CONFIRM=0 or omit it to disable this gate.",
         )
 
     # Retrieve pooled clients from app.state for connection reuse
@@ -171,8 +252,10 @@ async def query(req: QueryRequest) -> GlassResponse:
     # Decompose into claims
     claims = await decompose_claims(raw_response, backend, settings, trail, http_client=http_client, anthropic_client=anthropic_client)
 
-    # Check each claim for consistency
-    claims = await verify_claims(claims, reasoning_trace, backend, settings, trail, http_client=http_client, anthropic_client=anthropic_client)
+    # Check each claim for consistency — using verifier backend if configured
+    verifier_backend = settings.verifier_backend or backend
+    verifier_settings = settings.verifier_settings()
+    claims = await verify_claims(claims, reasoning_trace, verifier_backend, verifier_settings, trail, http_client=http_client, anthropic_client=anthropic_client)
 
     response = GlassResponse(
         id=str(uuid.uuid4()),
@@ -184,6 +267,7 @@ async def query(req: QueryRequest) -> GlassResponse:
         audit_trail=trail.to_list(),
         provenance_seal="",
         backend=backend,
+        verifier_backend=verifier_backend if verifier_backend != backend else None,
         timestamp=datetime.now(timezone.utc).isoformat(),
     )
 
@@ -457,6 +541,12 @@ async def query_stream(req: QueryRequest):
             yield f"event: error\ndata: {json_module.dumps({'detail': 'No model backend is available.'})}\n\n"
         return StreamingResponse(error_stream(), media_type="text/event-stream")
 
+    # Cloud confirmation gate for streaming endpoint
+    if _is_cloud_backend(backend) and not _cloud_confirmed:
+        async def gate_stream():
+            yield f"event: error\ndata: {json_module.dumps({'detail': 'Cloud data egress not confirmed. POST /api/cloud/confirm first.'})}\n\n"
+        return StreamingResponse(gate_stream(), media_type="text/event-stream")
+
     async def event_stream():
         http_client = getattr(app.state, "http_client", None)
         anthropic_client = getattr(app.state, "anthropic_client", None)
@@ -490,9 +580,11 @@ async def query_stream(req: QueryRequest):
         )
         yield sse("stage", {"name": "decompose", "status": "done"})
 
-        # Stage 3: Verify claims
+        # Stage 3: Verify claims — using verifier backend if configured
         yield sse("stage", {"name": "verify", "status": "started"})
-        claims = await verify_claims(claims, reasoning_trace, backend, settings, trail, http_client=http_client, anthropic_client=anthropic_client)
+        verifier_backend = settings.verifier_backend or backend
+        verifier_settings_obj = settings.verifier_settings()
+        claims = await verify_claims(claims, reasoning_trace, verifier_backend, verifier_settings_obj, trail, http_client=http_client, anthropic_client=anthropic_client)
         yield sse("stage", {"name": "verify", "status": "done"})
 
         # Stage 4: Audit + Seal
@@ -507,6 +599,7 @@ async def query_stream(req: QueryRequest):
             audit_trail=trail.to_list(),
             provenance_seal="",
             backend=backend,
+            verifier_backend=verifier_backend if verifier_backend != backend else None,
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
 

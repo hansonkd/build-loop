@@ -15,9 +15,9 @@ Read `.build-loop/sessions/${CLAUDE_SESSION_ID}/pace-metrics.json` if it exists 
 
 ## Steps
 
-1. **Read the goal.** `reference-docs/goal.md`. Everything that doesn't serve this pain is a candidate for deletion.
+1. **Read the goal.** `reference-docs/sessions/${CLAUDE_SESSION_ID}/goal.md`. Everything that doesn't serve this pain is a candidate for deletion.
 
-2. **Read all specs.** `reference-docs/`. Are they still coherent, or have they become a feature list? A spec that lists 13 principles is probably 8 principles too many.
+2. **Read all shared specs.** `reference-docs/` (not inside sessions/). Are they still coherent, or have they become a feature list? A spec that lists 13 principles is probably 8 principles too many.
 
 3. **Read the code.** Don't skim — read. Look for:
    - Features not in the spec → candidate for deletion

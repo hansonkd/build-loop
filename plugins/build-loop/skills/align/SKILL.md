@@ -11,9 +11,9 @@ Update `reference-docs/` specs to reflect feedback and goal. Don't write code â€
 
 ## Steps
 
-1. Read `reference-docs/goal.md`.
-2. Read latest `feedback-*.md` files. Look at "Suggested Spec Changes" section.
-3. Read current specs in `reference-docs/`.
+1. Read this session's goal: `reference-docs/sessions/${CLAUDE_SESSION_ID}/goal.md`.
+2. Read this session's latest `reference-docs/sessions/${CLAUDE_SESSION_ID}/feedback-*.md`. Look at "Suggested Spec Changes" section. Also scan other sessions' feedback.
+3. Read current shared specs in `reference-docs/` (not inside sessions/).
 4. For each suggested spec change from feedback:
    - Does it serve the goal's stated pain?
    - Is it a painkiller or a vitamin?

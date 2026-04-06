@@ -1,6 +1,6 @@
 ---
 name: build
-description: Implement the highest-impact spec-code gap. Spec first, code second, verify third. One change per cycle. Called by /self-improve.
+description: Implement the highest-impact spec-code gap. Spec first, code second, verify third. One change per cycle. Supports branch/PR mode for shared repos.
 allowed-tools: Read Grep Glob Bash Agent Write Edit
 effort: high
 ---
@@ -13,9 +13,25 @@ Pick the single highest-impact gap between specs and code. Update spec, implemen
 
 Read `.build-loop/sessions/${CLAUDE_SESSION_ID}/pace-metrics.json` if it exists. If pace is PAUSE, skip. If SLOW, only fix BROKEN items. If CONSERVE, use sonnet subagents instead of opus.
 
+## Branch Mode
+
+Check if the project's `reference-docs/goal.md` contains a `**Branch Mode:**` field.
+
+- `**Branch Mode:** direct` (default) — commit to the current branch. Best for solo devs on personal projects.
+- `**Branch Mode:** branch` — create a new branch per cycle (`build-loop/cycle-N-<short-desc>`), commit there. User merges manually.
+- `**Branch Mode:** pr` — create a branch AND open a draft PR via `gh pr create --draft`. Best for teams and OSS.
+
+If branch mode is `branch` or `pr`:
+1. Before making changes: `git checkout -b build-loop/cycle-N-<short-desc>` (where N is the cycle number from the loop log and short-desc is a 2-3 word slug of the change)
+2. Make changes and commit on that branch
+3. If mode is `pr`: run `gh pr create --draft --title "<change summary>" --body "Automated by build-loop cycle N"`
+4. After commit/PR: switch back to the original branch (`git checkout -`)
+
+If `gh` is not installed and mode is `pr`, fall back to `branch` mode and note "gh CLI not available, created branch only" in the log.
+
 ## Steps
 
-1. **Read state.** `reference-docs/goal.md` for the pain. All specs in `reference-docs/`. Latest `feedback-*.md` for priorities. The backlog from `.claude/loop-log.md`.
+1. **Read state.** Session's `goal.md` for the pain. All specs in `reference-docs/`. Latest `feedback-*.md` for priorities. The backlog from `.build-loop/sessions/${CLAUDE_SESSION_ID}/loop-log.md`.
 
 2. **Pick ONE change.** The highest-impact spec-code gap that serves the goal. Use the priority framework: BROKEN > MISSING > DEPTH > POLISH.
 
@@ -25,11 +41,11 @@ Read `.build-loop/sessions/${CLAUDE_SESSION_ID}/pace-metrics.json` if it exists.
 
 5. **Implement.** Write code matching the spec. If the code reveals the spec was wrong, update the spec first, then fix the code. Don't let them drift.
 
-6. **Security check (build-time, not after).** Before committing, ask: Does any new code take user input? If yes: does that input go through validation/sanitization before reaching a shell, database query, or file path? Catch this now, not in a future review cycle. This turns reactive security catches into a build-time checklist.
+6. **Security check (build-time, not after).** Before committing, ask: Does any new code take user input? If yes: does that input go through validation/sanitization before reaching a shell, database query, or file path? Catch this now, not in a future review cycle.
 
 7. **Verify.** Run tests if they exist. Verify the app starts. If there's a deploy step, run a smoke test. If anything broke, fix it before committing — don't leave broken state for the next cycle.
 
-8. **Commit.** Message explains: what pain this addresses, what changed, what was verified. One change, one commit.
+8. **Commit.** Follow the branch mode. Message explains: what pain this addresses, what changed, what was verified. One change, one commit.
 
 ## What "done properly" means
 
@@ -38,3 +54,4 @@ Read `.build-loop/sessions/${CLAUDE_SESSION_ID}/pace-metrics.json` if it exists.
 - Spec matches code
 - No partial implementations ("I'll finish this next cycle" = no)
 - The change is independently useful — if the loop stops, this commit stands on its own
+- If branch/pr mode: the branch is clean and the PR description explains the change

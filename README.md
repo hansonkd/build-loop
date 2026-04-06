@@ -117,8 +117,19 @@ Each session's goal lives at `reference-docs/sessions/<session-id>/goal.md`. It'
 **Solution:** A GitHub App that catches AI-specific bug patterns before merge
 **Budget:** 20% of subscription capacity
 **Not:** Not a general linter. Not a code formatter. Not an AI coding assistant.
+**Branch Mode:** pr
 **Set:** 2026-04-05
 ```
+
+### Branch Mode
+
+Controls how `/build` commits changes. Set in your goal.md:
+
+| Mode | Behavior | Best for |
+|------|----------|----------|
+| `direct` (default) | Commits to current branch | Solo devs, personal projects |
+| `branch` | Creates `build-loop/cycle-N-desc` branch per cycle | Teams, manual review |
+| `pr` | Creates branch + opens draft PR via `gh` | Teams, OSS, CI workflows |
 
 ### The Evaluation File
 

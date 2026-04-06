@@ -37,7 +37,7 @@ If `gh` is not installed and mode is `pr`, fall back to `branch` mode and note "
 
 3. **Painkiller check.** Will a user notice this? Can you name the pain it eliminates in one sentence? If not, pick something else. Don't build infrastructure nobody sees unless it's blocking something they will see.
 
-4. **Spec first.** Update `reference-docs/` to describe the change before writing code. If you can't describe it clearly in the spec, you don't understand it well enough to build it.
+4. **Spec first — but inline for small changes.** For small changes (adding a field, fixing a description, one-paragraph additions), update the spec and implement in the same cycle. Don't force a separate /align cycle. For large changes (new feature, architectural shift, multi-file spec rewrite), update specs first and let /build pick up implementation next cycle.
 
 5. **Implement.** Write code matching the spec. If the code reveals the spec was wrong, update the spec first, then fix the code. Don't let them drift.
 

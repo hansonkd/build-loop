@@ -8,126 +8,71 @@ effort: medium
 
 # Self-Improve — Development Loop Router
 
-You are a lightweight decision-maker. Each cycle: check budget, read state, pick ONE action, invoke the right skill. You don't do the work — you delegate. One feature per cycle, done properly. No half-implementations.
+Each cycle: check budget, read state, pick ONE action, delegate. You don't do the work.
 
-## Session Isolation
+## Session paths
 
-Multiple sessions can run in the same project with different goals. Per-session state is namespaced by `${CLAUDE_SESSION_ID}`:
+Per-session: `reference-docs/sessions/${CLAUDE_SESSION_ID}/` (goal, evaluation, feedback) and `.build-loop/sessions/${CLAUDE_SESSION_ID}/` (loop-log, pace-metrics). Shared: `reference-docs/*.md` (specs) and the code. Coordination via git.
 
-**Per-session (private to this session):**
-- `reference-docs/sessions/${CLAUDE_SESSION_ID}/goal.md`
-- `reference-docs/sessions/${CLAUDE_SESSION_ID}/evaluation.md`
-- `reference-docs/sessions/${CLAUDE_SESSION_ID}/feedback-*.md`
-- `.build-loop/sessions/${CLAUDE_SESSION_ID}/loop-log.md`
-- `.build-loop/sessions/${CLAUDE_SESSION_ID}/pace-metrics.json`
+## First run
 
-**Shared (all sessions read/write, coordinated via git):**
-- `reference-docs/*.md` (specs — vision, architecture, principles, etc.)
-- The code itself
-- Git history
+If `$ARGUMENTS` has 2+ parts, parse as `<budget%> <goal-summary>`. Create session dirs, write starter goal.md and evaluation.md, initialize loop-log with cycle 0.
 
-Sessions coordinate through git: each session commits its changes, the next session pulls and sees them. No other coordination mechanism is needed.
-
-## First run: setup
-
-If `$ARGUMENTS` has 2+ parts, parse as `<budget%> <goal-summary>`.
-
-Create the session directory: `reference-docs/sessions/${CLAUDE_SESSION_ID}/`
-
-Write `reference-docs/sessions/${CLAUDE_SESSION_ID}/goal.md` (see /refine-goal for format).
-Write `reference-docs/sessions/${CLAUDE_SESSION_ID}/evaluation.md` (see /refine-evaluation for format).
-Initialize `.build-loop/sessions/${CLAUDE_SESSION_ID}/loop-log.md` with cycle 0.
-
-If no goal file exists for this session and no args: say "Run `/refine-goal` first" and stop.
+If no goal file exists and no args: say "Run `/refine-goal` first" and stop.
 
 ## Each cycle
 
-### 1. Check budget (~10 seconds)
+### 1. Budget
 
-**Requires:** `claude-rate-monitor` and `ccusage` npm packages (declared in package.json). If not installed, run `npm install` first. If commands fail, skip budget checking and run at NORMAL pace with a warning.
+Run `npx claude-rate-monitor --json`. If it fails, skip budget check and run NORMAL.
 
-Run: `npx claude-rate-monitor --json`
+- 5h utilization > 0.8 → **PAUSE** (log and stop)
+- 5h utilization > budget × 1.5 → **SLOW** (only /evaluate)
+- Weekly > 0.85 with > 2 days left → **SLOW**
+- Otherwise → **NORMAL**
 
-Parse `session.utilization` (5h) and `weekly.utilization` (7d). Read budget from this session's goal.md.
+### 2. State
 
-- If 5h utilization > 0.8: **PAUSE**. Log and stop.
-- If 5h utilization > (budget/100) × 1.5: **SLOW**. Only /evaluate is allowed.
-- If weekly utilization > 0.85 with > 2 days remaining: **SLOW** for the week.
-- Otherwise: **NORMAL**.
+Read: loop-log (last backlog), session feedback files, other sessions' feedback, `git log --oneline -5`. Quick check: tests pass? App starts?
 
-Append one line to `.build-loop/sessions/${CLAUDE_SESSION_ID}/pace-metrics.json`.
+### 3. Decide (first match wins)
 
-**Infer other sessions:** If total utilization is rising faster than this session's contribution, other sessions exist. Adjust: `effective_budget = budget / max(1, inferred_sessions)`. Be conservative — slow down rather than starve others.
+**BROKEN > MISSING > DEPTH > POLISH**
 
-### 2. Read state (~5 seconds)
+| Condition | Action |
+|-----------|--------|
+| Tests failing / app broken | FIX → `/build` |
+| No feedback for this session | RESEARCH → `/research` |
+| Feedback says goal is wrong | FLAG → warn user, stop |
+| Feedback has unapplied spec changes | ALIGN → `/align` |
+| Specs have unbuilt features | BUILD → `/build` |
+| Every 10th cycle | EVALUATE (full) → `/evaluate` |
+| Every 5th cycle | EVALUATE (focused) or SIMPLIFY → `/evaluate` or `/simplify` |
+| Everything aligned | EVALUATE → `/evaluate` |
 
-- Read this session's `.build-loop/sessions/${CLAUDE_SESSION_ID}/loop-log.md` — what did last cycle do? What's in the backlog?
-- Read this session's `reference-docs/sessions/${CLAUDE_SESSION_ID}/feedback-*.md` — any feedback?
-- Also scan other sessions' feedback files (`reference-docs/sessions/*/feedback-*.md`) for signals this session should know about
-- `git log --oneline -5` — recent work (from any session)
-- Count: cycles since last evaluation, last simplification, last structural work
-- Quick check: do tests pass? Does the app start? (If not, this is a BROKEN state.)
+Every 5th cycle: mandatory structural work (/simplify). Don't defer it.
 
-### 3. Pick ONE action
+If last 3 cycles were all DEPTH/POLISH: "High-impact work done. Recommend reducing loop frequency."
 
-**Priority framework: BROKEN > MISSING > DEPTH > POLISH**
+### 4. Delegate
 
-When something is broken (tests fail, app won't start, regression), fix it first. When a core feature is missing, build it. When existing features need hardening, deepen them. Polish is last.
+Invoke the chosen skill. It handles execution, subagents, commits.
 
-**Decision rules — first match wins:**
-
-| Condition | Action | Invoke |
-|-----------|--------|--------|
-| Tests failing or app won't start | FIX | `/build` (with fix context) |
-| No feedback files exist for this session | RESEARCH | `/research` |
-| Latest feedback suggests goal is wrong | FLAG | Output warning, suggest `/refine-goal`, stop |
-| Feedback has spec changes not yet applied | ALIGN | `/align` |
-| Specs describe features code doesn't have | BUILD | `/build` |
-| Every 10th cycle: full evaluation due | EVALUATE | `/evaluate` |
-| Every 5th cycle: focused evaluation due | EVALUATE | `/evaluate` (focused mode) |
-| Every 5th cycle: structural/simplify due | SIMPLIFY | `/simplify` |
-| Everything aligned and built | EVALUATE | `/evaluate` (default fallback) |
-
-**Structural work commitment:** Every 5th cycle, regardless of backlog, do structural work (/simplify with strong mandate). This prevents the "structural debt deferred forever" problem. Don't skip it because there's a feature to build.
-
-**Diminishing returns detection:** If the last 3 cycles were all DEPTH or POLISH (no BROKEN or MISSING), high-impact work is exhausted. Output: "High-impact work done. Recommend reducing to `/loop 2h /self-improve` or `/loop 4h /self-improve`." Don't keep burning budget on marginal improvements.
-
-### 4. Invoke the skill
-
-Use the Skill tool to invoke the chosen skill. The specialized skill handles execution, subagent launching, file writing, and committing.
-
-### 5. Post-build verification
-
-After any BUILD or FIX action completes:
-- Run tests (if they exist)
-- Verify the app starts
-- If the project has a deploy step, run a quick smoke test after deploy
-- If anything broke, the NEXT cycle's state will be BROKEN and it auto-prioritizes
-
-### 6. Log (the handoff contract)
+### 5. Log
 
 Append to `.build-loop/sessions/${CLAUDE_SESSION_ID}/loop-log.md`:
 
 ```markdown
 ## YYYY-MM-DD HH:MM — Cycle N — ACTION
-Pace: NORMAL | 5h: X% | 7d: Y% | Budget: Z%
-What: [one sentence — what was done]
-Result: [one sentence — what changed]
-Tests: [pass count or "no tests"]
+Pace: X | 5h: X% | 7d: X% | Budget: X%
+What: [one sentence]
+Result: [one sentence]
+Tests: [count or N/A]
 
 ### Backlog (for next cycle)
-1. [Highest priority remaining item]
-2. [Second priority]
-3. [Third priority]
+1. [Top priority]
+2. [Second]
+3. [Third]
 ```
 
-**The backlog section is the handoff contract.** It tells the next cycle exactly what to focus on without re-reading everything. 3 items max. Update every cycle.
-
-**Three sources of truth — don't duplicate between them:**
-- `reference-docs/` (shared specs + per-session goal) = what the project SHOULD be (intent)
-- The code = what the project IS right now (state)
-- `.build-loop/sessions/${CLAUDE_SESSION_ID}/loop-log.md` = why things changed (decisions)
-
-The log should never list features or restate the spec. It records actions, reasoning, and the backlog. After 50 entries, summarize the oldest 40 into a single "history summary" block at the top.
-
-**Never lose the backlog.** If you're unsure what to do, read the last backlog entry. It's the previous cycle's best judgment about what matters next.
+The backlog is the handoff contract. 3 items max. Never lose it. After 50 entries, summarize the oldest 40.

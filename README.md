@@ -95,6 +95,7 @@ The loop is spec-driven. Feedback updates specs. Specs drive code. Code never dr
 |-------|-------------|
 | `/refine-goal` | Set or update the project's goal — what pain you're solving |
 | `/refine-evaluation` | Define how the loop should test if the product is working |
+| `/bootstrap` | Generate starter specs from an existing codebase (run once) |
 
 ## How It Works
 
@@ -196,7 +197,10 @@ Every skill asks before doing work:
 ### Add the loop to an existing project
 
 ```bash
-# In a repo with existing code
+# In a repo with existing code — bootstrap first
+/bootstrap
+# > Reads your codebase, generates reference-docs/architecture.md and conventions.md
+
 /refine-goal
 # > Set the pain your project solves
 
@@ -204,7 +208,7 @@ Every skill asks before doing work:
 # > Define how to test if it's working
 
 /loop 1h /self-improve 15
-# The loop reads your code, gathers feedback, builds what's missing
+# The loop reads your code + specs, gathers feedback, builds what's missing
 ```
 
 ### Run individual skills manually

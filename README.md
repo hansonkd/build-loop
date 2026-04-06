@@ -21,24 +21,25 @@ git clone git@github.com:hansonkd/build-loop.git
 
 ## Quick Start
 
-```bash
-# 1. Set your goal (interactive — it will ask you questions)
-/refine-goal
-
-# 2. Define how to evaluate success (interactive)
-/refine-evaluation
-
-# 3. Start the loop — 20% budget, every 30 minutes
-/loop 30m /self-improve 20
-```
-
-Or do it all in one shot:
+One command. Works on new or existing repos:
 
 ```bash
 /loop 30m /self-improve 20 "Help developers catch AI-generated bugs before merge"
 ```
 
-The loop will create session-scoped goal and evaluation files, then start working.
+This will:
+1. Create a goal file from your description
+2. Generate a default evaluation method
+3. Auto-bootstrap specs from existing code (if any)
+4. Run the first cycle immediately
+
+For more control over goal and evaluation criteria:
+
+```bash
+/refine-goal                    # interactive goal-setting
+/refine-evaluation              # define how to test success
+/loop 30m /self-improve 20      # start the loop
+```
 
 ## Named Sessions
 

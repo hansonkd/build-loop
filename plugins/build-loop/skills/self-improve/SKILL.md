@@ -14,11 +14,20 @@ Each cycle: check budget, read state, pick ONE action, delegate. You don't do th
 
 Per-session: `reference-docs/sessions/${CLAUDE_SESSION_ID}/` (goal, evaluation, feedback) and `.build-loop/sessions/${CLAUDE_SESSION_ID}/` (loop-log, pace-metrics). Shared: `reference-docs/*.md` (specs) and the code. Coordination via git.
 
-## First run
+## First run (zero-config quickstart)
 
-If `$ARGUMENTS` has 2+ parts, parse as `<budget%> <goal-summary>`. Create session dirs, write starter goal.md and evaluation.md, initialize loop-log with cycle 0.
+If `$ARGUMENTS` has 2+ parts, parse as `<budget%> <goal-summary>`. Then:
 
-If no goal file exists and no args: say "Run `/refine-goal` first" and stop.
+1. Create session dirs (`reference-docs/sessions/${CLAUDE_SESSION_ID}/`, `.build-loop/sessions/${CLAUDE_SESSION_ID}/`)
+2. Write goal.md with the summary as the Pain field and budget
+3. Write a starter evaluation.md with default method (sonnet subagents as target users)
+4. **Auto-bootstrap:** If there's existing code but no shared specs in `reference-docs/` (no `architecture.md`, `conventions.md`, etc.), generate them by reading the codebase — same as `/bootstrap` but automatic. Skip if specs already exist.
+5. Initialize loop-log with cycle 0
+6. Immediately run the first cycle (don't wait for next cron fire)
+
+This means `/loop 30m /self-improve 20 "Help devs catch AI bugs"` goes from zero to first cycle with no intermediate steps.
+
+If no goal file exists and no args: say "Run `/self-improve <budget%> <goal>` or `/refine-goal` first" and stop.
 
 ## Each cycle
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-A Claude Code plugin providing autonomous product development skills. Install it, set a goal, and run `/loop 30m /self-improve 20` — the loop continuously researches, evaluates, builds, and simplifies your project.
+A Claude Code plugin that keeps your project moving between sessions. Set a goal, start the loop, and every cycle it researches, evaluates, builds, or simplifies — then writes a structured handoff so the next cycle (or you) knows exactly where to pick up.
 
 ## Plugin Structure
 

@@ -1,6 +1,6 @@
 # build-loop
 
-Autonomous product development skills for Claude Code. Set a goal, start the loop, and your project evolves while you sleep.
+Never lose context between Claude Code sessions. A plugin that keeps your project moving — researching, building, evaluating, and simplifying — with a structured handoff every cycle so you always know where you left off.
 
 ## Install
 

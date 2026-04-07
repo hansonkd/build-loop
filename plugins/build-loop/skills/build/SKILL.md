@@ -43,13 +43,17 @@ If `gh` is not installed and mode is `pr`, fall back to `branch` mode and note "
 
 6. **Security check (build-time, not after).** Before committing, ask: Does any new code take user input? If yes: does that input go through validation/sanitization before reaching a shell, database query, or file path? Catch this now, not in a future review cycle.
 
-7. **Verify.** Run tests if they exist. Verify the app starts. If there's a deploy step, run a smoke test. If anything broke, fix it before committing — don't leave broken state for the next cycle.
+7. **Test the change.** This is not optional.
+   - If a test suite exists: run it. If any test fails, fix before committing.
+   - **If you added or changed behavior: write a test for it.** Not "consider adding" — write it. A feature without a test is not done. The test proves the feature works and catches regressions in future cycles.
+   - If no test suite exists yet and this is the first behavior change: create the test file and add the project's test runner to dev dependencies. The first test is the hardest — do it now so every future cycle has something to run.
+   - Verify the app starts.
 
 8. **Commit.** Follow the branch mode. Message explains: what pain this addresses, what changed, what was verified. One change, one commit.
 
 ## What "done properly" means
 
-- Tests pass (or there are no tests — but if you added behavior, add a test)
+- **Tests pass AND new behavior has a test** — this is the gate. Don't commit without it.
 - App starts
 - Spec matches code
 - No partial implementations ("I'll finish this next cycle" = no)
